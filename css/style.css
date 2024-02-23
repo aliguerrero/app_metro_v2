@@ -72,7 +72,7 @@
   --cui-border-radius-2xl: 2rem;
   --cui-border-radius-pill: 50rem;
   --cui-heading-color: unset;
-  --cui-link-color: #321fdb;
+  --cui-link-color: #000000;
   --cui-link-hover-color: #2819af;
   --cui-code-color: #d63384;
   --cui-highlight-bg: #fff3cd;
@@ -3356,19 +3356,19 @@ html:not([dir=rtl]) .form-check-inline .form-check-input ~ .invalid-feedback {
 
 .btn-primary {
   --cui-btn-color: rgba(255, 255, 255, 0.87);
-  --cui-btn-bg: #321fdb;
-  --cui-btn-border-color: #321fdb;
+  --cui-btn-bg: #3C4B64; /* Color base */
+  --cui-btn-border-color: #3C4B64;
   --cui-btn-hover-color: rgba(255, 255, 255, 0.87);
-  --cui-btn-hover-bg: #5141e0;
-  --cui-btn-hover-border-color: #4735df;
+  --cui-btn-hover-bg: #5B6D8B; /* Color más claro al hacer hover */
+  --cui-btn-hover-border-color: #5B6D8B;
   --cui-btn-focus-shadow-rgb: 75, 58, 223;
   --cui-btn-active-color: rgba(255, 255, 255, 0.87);
-  --cui-btn-active-bg: #5b4ce2;
-  --cui-btn-active-border-color: #4735df;
+  --cui-btn-active-bg: #a2b8d4; /* Color activo un poco más claro que hover */
+  --cui-btn-active-border-color: #4f6179; /* Color activo un poco más claro que hover */
   --cui-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 21, 0.125);
   --cui-btn-disabled-color: rgba(255, 255, 255, 0.87);
-  --cui-btn-disabled-bg: #321fdb;
-  --cui-btn-disabled-border-color: #321fdb;
+  --cui-btn-disabled-bg: #3C4B64;
+  --cui-btn-disabled-border-color: #3C4B64;
 }
 
 .btn-secondary {
@@ -4369,7 +4369,7 @@ html:not([dir=rtl]) .nav {
 .nav-pills .nav-link.active,
 .nav-pills .show > .nav-link {
   color: var(--cui-nav-pills-link-active-color);
-  background-color: var(--cui-nav-pills-link-active-bg);
+  background-color: rgb(60, 75, 100);
 }
 
 .nav-fill > .nav-link,
