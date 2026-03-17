@@ -1,0 +1,7 @@
+Modulo: empleados
+Operacion: eliminar
+
+Sentencias SQL:
+
+[1]
+UPDATE empleado SET std_reg = 0 WHERE id_empleado = :id_empleado;

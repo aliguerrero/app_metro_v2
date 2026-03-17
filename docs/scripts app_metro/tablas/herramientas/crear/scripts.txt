@@ -1,0 +1,33 @@
+Modulo: herramientas
+Operacion: crear
+
+Sentencias SQL:
+
+- Validar duplicado por nombre
+SELECT
+    id_ai_herramienta,
+    std_reg
+FROM herramienta
+WHERE TRIM(LOWER(nombre_herramienta)) = TRIM(LOWER(:nombre))
+LIMIT 1;
+
+- Validar categoria activa
+SELECT COUNT(1)
+FROM categoria_herramienta
+WHERE id_ai_categoria_herramienta = :id
+  AND std_reg = 1;
+
+- Insertar herramienta
+INSERT INTO herramienta (
+    nombre_herramienta,
+    id_ai_categoria_herramienta,
+    cantidad,
+    estado,
+    std_reg
+) VALUES (
+    :Nombre,
+    :Categoria,
+    :Cant,
+    :Estado,
+    :std_reg
+);

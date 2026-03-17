@@ -1,0 +1,28 @@
+Modulo: herramientas
+Operacion: actualizar
+
+Sentencias SQL:
+
+
+- Validar categoria activa
+SELECT COUNT(1)
+FROM categoria_herramienta
+WHERE id_ai_categoria_herramienta = :id
+  AND std_reg = 1;
+
+- Validar duplicado por nombre en otra herramienta
+SELECT
+    id_ai_herramienta
+FROM herramienta
+WHERE TRIM(LOWER(nombre_herramienta)) = TRIM(LOWER(:nombre))
+  AND id_ai_herramienta <> :id
+  AND std_reg = 1
+LIMIT 1;
+
+- Actualizar herramienta
+UPDATE herramienta
+SET nombre_herramienta = :Nombre,
+    id_ai_categoria_herramienta = :Categoria,
+    cantidad = :Cant,
+    estado = :Estado
+WHERE id_ai_herramienta = :ID;

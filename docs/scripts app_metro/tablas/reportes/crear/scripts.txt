@@ -1,0 +1,31 @@
+Modulo: reportes
+Operacion: crear
+
+Sentencias SQL:
+
+- Registrar reporte generado
+INSERT INTO reporte_generado (
+    tipo_reporte,
+    titulo_reporte,
+    nombre_archivo,
+    ruta_archivo,
+    mime_type,
+    tamano_bytes,
+    parametros_json,
+    id_user_generador,
+    nombre_user_generador,
+    username_generador,
+    std_reg
+) VALUES (
+    :tipo_reporte,
+    :titulo_reporte,
+    :nombre_archivo,
+    :ruta_archivo,
+    :mime_type,
+    :tamano_bytes,
+    :parametros_json,
+    :id_user_generador,
+    :nombre_user_generador,
+    :username_generador,
+    1
+);

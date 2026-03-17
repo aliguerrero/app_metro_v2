@@ -1,0 +1,6 @@
+Modulo: turnos_trabajo
+Operacion: eliminar
+
+Sentencias SQL:
+
+UPDATE turno_trabajo SET std_reg = 0 WHERE id_ai_turno = :id LIMIT 1;

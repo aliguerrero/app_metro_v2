@@ -1,0 +1,6 @@
+Modulo: areas
+Operacion: eliminar
+
+Sentencias SQL :
+
+UPDATE area_trabajo SET std_reg = 0 WHERE id_ai_area = :id LIMIT 1;

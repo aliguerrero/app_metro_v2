@@ -1,0 +1,6 @@
+Modulo: categorias_empleado
+Operacion: listar
+
+Sentencias SQL:
+
+SELECT id_ai_categoria_empleado, nombre_categoria, descripcion, std_reg FROM categoria_empleado WHERE std_reg = 1 ORDER BY nombre_categoria ASC;

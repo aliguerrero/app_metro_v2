@@ -1,0 +1,6 @@
+Modulo: turnos_trabajo
+Operacion: actualizar
+
+Sentencias SQL:
+
+UPDATE turno_trabajo SET nombre_turno = :n WHERE id_ai_turno = :id;

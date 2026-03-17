@@ -1,0 +1,6 @@
+Modulo: roles
+Operacion: actualizar
+
+Sentencias SQL:
+
+UPDATE roles_permisos SET perm_usuarios_view = :puv, perm_usuarios_add = :pua, perm_usuarios_edit = :pue, perm_usuarios_delete = :pud, perm_herramienta_view = :phv, perm_herramienta_add = :pha, perm_herramienta_edit = :phe, perm_herramienta_delete = :phd, perm_miembro_view = :pmv, perm_miembro_add = :pma, perm_miembro_edit = :pme, perm_miembro_delete = :pmd, perm_ot_view = :potv, perm_ot_add = :pota, perm_ot_edit = :pote, perm_ot_delete = :potd, perm_ot_add_detalle = :potad, perm_ot_generar_reporte = :potgr, perm_ot_add_herramienta = :potah WHERE id = :id;

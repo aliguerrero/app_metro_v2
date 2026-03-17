@@ -1,0 +1,6 @@
+Modulo: sitios_trabajo
+Operacion: listar
+
+Sentencias SQL:
+
+SELECT id_ai_sitio, nombre_sitio, std_reg FROM sitio_trabajo WHERE std_reg = 1 ORDER BY id_ai_sitio ASC;

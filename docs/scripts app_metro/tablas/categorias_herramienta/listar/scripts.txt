@@ -1,0 +1,18 @@
+Modulo: categorias_herramienta
+Operacion: listar
+
+Sentencias SQL:
+
+- Listar categorias de herramienta
+SELECT
+    c.id_ai_categoria_herramienta,
+    c.nombre_categoria,
+    c.descripcion,
+    COUNT(h.id_ai_herramienta) AS total_herramientas
+FROM categoria_herramienta c
+LEFT JOIN herramienta h
+    ON h.id_ai_categoria_herramienta = c.id_ai_categoria_herramienta
+   AND h.std_reg = 1
+WHERE c.std_reg = 1
+GROUP BY c.id_ai_categoria_herramienta, c.nombre_categoria, c.descripcion
+ORDER BY c.nombre_categoria ASC;

@@ -1,0 +1,10 @@
+Modulo: ordenes_trabajo
+Operacion: actualizar
+
+Sentencias SQL:
+
+-Ordenes de trabajo:
+UPDATE orden_trabajo SET nombre_trab = :trabajo, id_ai_sitio = :sitio, fecha = :fecha, semana = :semana, mes = :mes WHERE n_ot = :ID;
+
+-Detalle de Ordenes de trabajo:
+UPDATE detalle_orden SET descripcion = :desc, cant_tec = :cant, id_ai_turno = :turno, id_ai_estado = :estado, id_miembro_cco = :cco, id_miembro_ccf = :ccf, id_user_act = :tec, hora_ini_pre = :pre_i, hora_fin_pre = :pre_f, hora_ini_tra = :tra_i, hora_fin_tra = :tra_f, hora_ini_eje = :eje_i, hora_fin_eje = :eje_f, observacion = :obs WHERE n_ot = :not AND fecha = :fecha AND id_ai_detalle = :id;

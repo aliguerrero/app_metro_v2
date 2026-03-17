@@ -1,0 +1,6 @@
+Modulo: empleados
+Operacion: crear
+
+Sentencias SQL:
+
+INSERT INTO empleado (id_empleado, nacionalidad, nombre_empleado, telefono, direccion, correo, id_ai_categoria_empleado, std_reg) VALUES (:id_empleado, :nacionalidad, :nombre_empleado, :telefono, :direccion, :correo, :id_ai_categoria_empleado, 1);

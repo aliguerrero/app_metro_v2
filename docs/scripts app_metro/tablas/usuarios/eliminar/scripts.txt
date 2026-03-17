@@ -1,0 +1,6 @@
+Modulo: usuarios
+Operacion: eliminar
+
+Sentencias SQL:
+
+UPDATE user_system SET std_reg = 0 WHERE id_user = :id AND id_user <> :sessionUser;

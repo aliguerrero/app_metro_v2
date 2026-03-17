@@ -1,0 +1,6 @@
+Modulo: areas
+Operacion: crear
+
+Sentencias SQL:
+
+INSERT INTO area_trabajo (nombre_area, nomeclatura, std_reg) VALUES (:n, :no, 1);

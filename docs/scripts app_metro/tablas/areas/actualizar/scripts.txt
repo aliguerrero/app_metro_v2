@@ -1,0 +1,6 @@
+Modulo: areas
+Operacion: actualizar
+
+Sentencias SQL:
+
+UPDATE area_trabajo SET nombre_area = :n, nomeclatura = :no WHERE id_ai_area = :id;

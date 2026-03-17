@@ -1,0 +1,6 @@
+Modulo: estados_ot
+Operacion: actualizar
+
+Sentencias SQL:
+
+UPDATE estado_ot SET nombre_estado = :nombre_estado, color = :color WHERE id_ai_estado = :id_ai_estado;

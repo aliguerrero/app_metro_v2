@@ -1,0 +1,6 @@
+Modulo: turnos_trabajo
+Operacion: crear
+
+Sentencias SQL:
+
+INSERT INTO turno_trabajo (nombre_turno, std_reg) VALUES (:n, 1);

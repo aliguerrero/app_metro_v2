@@ -1,0 +1,24 @@
+Modulo: reportes
+Operacion: listar
+
+Sentencias SQL:
+
+- Listar reportes generados
+SELECT
+    id_ai_reporte_generado,
+    tipo_reporte,
+    titulo_reporte,
+    nombre_archivo,
+    ruta_archivo,
+    mime_type,
+    tamano_bytes,
+    parametros_json,
+    id_user_generador,
+    nombre_user_generador,
+    username_generador,
+    created_at,
+    std_reg
+FROM reporte_generado
+WHERE std_reg = 1
+ORDER BY created_at DESC, id_ai_reporte_generado DESC
+LIMIT 200;

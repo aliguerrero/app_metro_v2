@@ -1,0 +1,6 @@
+Modulo: logs_auditoria
+Operacion: buscar
+
+Sentencias SQL:
+
+SELECT id_log, event_uuid, id_user, tabla, operacion, pk_registro, pk_json, accion, resp_system, data_old, data_new, data_diff, fecha_hora, connection_id, db_user, db_host, changed_cols, std_reg FROM log_user WHERE id_log = :id LIMIT 1; SELECT COUNT(1) AS c FROM log_user l LEFT JOIN user_system u ON u.id_user = l.id_user WHERE 1 = 1;

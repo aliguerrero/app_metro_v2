@@ -1,0 +1,78 @@
+﻿Modulo: triggers
+Tabla: orden_trabajo
+
+Sentencias SQL y funcion:
+
+- trg_orden_trabajo_ai
+Funcion: Registra en log_user la creacion de registros de orden_trabajo.
+Momento: AFTER INSERT
+Definer: root@localhost
+SQL:
+CREATE DEFINER=root@localhost TRIGGER trg_orden_trabajo_ai
+AFTER INSERT ON orden_trabajo
+FOR EACH ROW
+INSERT INTO `log_user`(
+  `event_uuid`,`id_user`,`tabla`,`operacion`,`pk_registro`,`pk_json`,
+  `accion`,`resp_system`,
+  `data_old`,`data_new`,`data_diff`,`changed_cols`,
+  `connection_id`,`db_user`,`db_host`
+) VALUES (
+  UUID(),
+  (SELECT `id_user` FROM `user_system` WHERE `id_user` = @app_user LIMIT 1),
+  'orden_trabajo',
+  'INSERT',
+  CONCAT('n_ot=', NEW.`n_ot`),
+  JSON_OBJECT('n_ot', NEW.`n_ot`),
+  CONCAT('CREAR ', 'orden_trabajo'),
+  CONCAT('INSERT orden_trabajo ', CONCAT('n_ot=', NEW.`n_ot`)),
+  NULL,
+  JSON_OBJECT('id_ai_ot', NEW.`id_ai_ot`, 'n_ot', NEW.`n_ot`, 'id_ai_area', NEW.`id_ai_area`, 'id_user', NEW.`id_user`, 'id_ai_sitio', NEW.`id_ai_sitio`, 'nombre_trab', NEW.`nombre_trab`, 'fecha', NEW.`fecha`, 'semana', NEW.`semana`, 'mes', NEW.`mes`, 'std_reg', NEW.`std_reg`),
+  JSON_OBJECT('id_ai_ot', NEW.`id_ai_ot`, 'n_ot', NEW.`n_ot`, 'id_ai_area', NEW.`id_ai_area`, 'id_user', NEW.`id_user`, 'id_ai_sitio', NEW.`id_ai_sitio`, 'nombre_trab', NEW.`nombre_trab`, 'fecha', NEW.`fecha`, 'semana', NEW.`semana`, 'mes', NEW.`mes`, 'std_reg', NEW.`std_reg`),
+  'id_ai_ot,n_ot,id_ai_area,id_user,id_ai_sitio,nombre_trab,fecha,semana,mes,std_reg',
+  CONNECTION_ID(),
+  USER(),
+  SUBSTRING_INDEX(USER(),'@',-1)
+);
+
+- trg_orden_trabajo_au
+Funcion: Registra en log_user las actualizaciones de orden_trabajo y detecta cambios de std_reg como eliminacion logica o reactivacion.
+Momento: AFTER UPDATE
+Definer: root@localhost
+SQL:
+CREATE DEFINER=root@localhost TRIGGER trg_orden_trabajo_au
+AFTER UPDATE ON orden_trabajo
+FOR EACH ROW
+INSERT INTO `log_user`(
+  `event_uuid`,`id_user`,`tabla`,`operacion`,`pk_registro`,`pk_json`,
+  `accion`,`resp_system`,
+  `data_old`,`data_new`,`data_diff`,`changed_cols`,
+  `connection_id`,`db_user`,`db_host`
+) VALUES (
+  UUID(),
+  (SELECT `id_user` FROM `user_system` WHERE `id_user` = @app_user LIMIT 1),
+  'orden_trabajo',
+  CASE WHEN NEW.`std_reg` = 0 AND OLD.`std_reg` = 1 THEN 'SOFT_DELETE' WHEN NEW.`std_reg` = 1 AND OLD.`std_reg` = 0 THEN 'RESTORE' ELSE 'UPDATE' END,
+  CONCAT('n_ot=', NEW.`n_ot`),
+  JSON_OBJECT('n_ot', NEW.`n_ot`),
+  CASE WHEN NEW.`std_reg` = 0 AND OLD.`std_reg` = 1 THEN CONCAT('ELIMINAR (LOGICO) ', 'orden_trabajo') WHEN NEW.`std_reg` = 1 AND OLD.`std_reg` = 0 THEN CONCAT('REACTIVAR ', 'orden_trabajo') ELSE CONCAT('MODIFICAR ', 'orden_trabajo') END,
+  CASE WHEN NEW.`std_reg` = 0 AND OLD.`std_reg` = 1 THEN CONCAT('SOFT_DELETE orden_trabajo ', CONCAT('n_ot=', NEW.`n_ot`)) WHEN NEW.`std_reg` = 1 AND OLD.`std_reg` = 0 THEN CONCAT('RESTORE orden_trabajo ', CONCAT('n_ot=', NEW.`n_ot`)) ELSE CONCAT('UPDATE orden_trabajo ', CONCAT('n_ot=', NEW.`n_ot`)) END,
+  JSON_OBJECT('id_ai_ot', OLD.`id_ai_ot`, 'n_ot', OLD.`n_ot`, 'id_ai_area', OLD.`id_ai_area`, 'id_user', OLD.`id_user`, 'id_ai_sitio', OLD.`id_ai_sitio`, 'nombre_trab', OLD.`nombre_trab`, 'fecha', OLD.`fecha`, 'semana', OLD.`semana`, 'mes', OLD.`mes`, 'std_reg', OLD.`std_reg`),
+  JSON_OBJECT('id_ai_ot', NEW.`id_ai_ot`, 'n_ot', NEW.`n_ot`, 'id_ai_area', NEW.`id_ai_area`, 'id_user', NEW.`id_user`, 'id_ai_sitio', NEW.`id_ai_sitio`, 'nombre_trab', NEW.`nombre_trab`, 'fecha', NEW.`fecha`, 'semana', NEW.`semana`, 'mes', NEW.`mes`, 'std_reg', NEW.`std_reg`),
+  JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_OBJECT(), IF(NOT (OLD.`id_ai_ot` <=> NEW.`id_ai_ot`), JSON_OBJECT('id_ai_ot', JSON_ARRAY(OLD.`id_ai_ot`, NEW.`id_ai_ot`)), JSON_OBJECT())), IF(NOT (OLD.`n_ot` <=> NEW.`n_ot`), JSON_OBJECT('n_ot', JSON_ARRAY(OLD.`n_ot`, NEW.`n_ot`)), JSON_OBJECT())), IF(NOT (OLD.`id_ai_area` <=> NEW.`id_ai_area`), JSON_OBJECT('id_ai_area', JSON_ARRAY(OLD.`id_ai_area`, NEW.`id_ai_area`)), JSON_OBJECT())), IF(NOT (OLD.`id_user` <=> NEW.`id_user`), JSON_OBJECT('id_user', JSON_ARRAY(OLD.`id_user`, NEW.`id_user`)), JSON_OBJECT())), IF(NOT (OLD.`id_ai_sitio` <=> NEW.`id_ai_sitio`), JSON_OBJECT('id_ai_sitio', JSON_ARRAY(OLD.`id_ai_sitio`, NEW.`id_ai_sitio`)), JSON_OBJECT())), IF(NOT (OLD.`nombre_trab` <=> NEW.`nombre_trab`), JSON_OBJECT('nombre_trab', JSON_ARRAY(OLD.`nombre_trab`, NEW.`nombre_trab`)), JSON_OBJECT())), IF(NOT (OLD.`fecha` <=> NEW.`fecha`), JSON_OBJECT('fecha', JSON_ARRAY(OLD.`fecha`, NEW.`fecha`)), JSON_OBJECT())), IF(NOT (OLD.`semana` <=> NEW.`semana`), JSON_OBJECT('semana', JSON_ARRAY(OLD.`semana`, NEW.`semana`)), JSON_OBJECT())), IF(NOT (OLD.`mes` <=> NEW.`mes`), JSON_OBJECT('mes', JSON_ARRAY(OLD.`mes`, NEW.`mes`)), JSON_OBJECT())), IF(NOT (OLD.`std_reg` <=> NEW.`std_reg`), JSON_OBJECT('std_reg', JSON_ARRAY(OLD.`std_reg`, NEW.`std_reg`)), JSON_OBJECT())),
+  NULLIF(CONCAT_WS(',', IF(NOT (OLD.`id_ai_ot` <=> NEW.`id_ai_ot`), 'id_ai_ot', NULL), IF(NOT (OLD.`n_ot` <=> NEW.`n_ot`), 'n_ot', NULL), IF(NOT (OLD.`id_ai_area` <=> NEW.`id_ai_area`), 'id_ai_area', NULL), IF(NOT (OLD.`id_user` <=> NEW.`id_user`), 'id_user', NULL), IF(NOT (OLD.`id_ai_sitio` <=> NEW.`id_ai_sitio`), 'id_ai_sitio', NULL), IF(NOT (OLD.`nombre_trab` <=> NEW.`nombre_trab`), 'nombre_trab', NULL), IF(NOT (OLD.`fecha` <=> NEW.`fecha`), 'fecha', NULL), IF(NOT (OLD.`semana` <=> NEW.`semana`), 'semana', NULL), IF(NOT (OLD.`mes` <=> NEW.`mes`), 'mes', NULL), IF(NOT (OLD.`std_reg` <=> NEW.`std_reg`), 'std_reg', NULL)), ''),
+  CONNECTION_ID(),
+  USER(),
+  SUBSTRING_INDEX(USER(),'@',-1)
+);
+
+- trg_orden_trabajo_bd
+Funcion: Impide el DELETE fisico en orden_trabajo y obliga a manejar el registro mediante eliminacion logica.
+Momento: BEFORE DELETE
+Definer: root@localhost
+SQL:
+CREATE DEFINER=root@localhost TRIGGER trg_orden_trabajo_bd
+BEFORE DELETE ON orden_trabajo
+FOR EACH ROW
+SIGNAL SQLSTATE '45000'
+  SET MESSAGE_TEXT = 'No se permite DELETE físico en orden_trabajo. Use eliminación lógica (UPDATE orden_trabajo SET std_reg=0 ...).';
+

@@ -1,0 +1,6 @@
+Modulo: categorias_empleado
+Operacion: buscar
+
+Sentencias SQL:
+
+SELECT id_ai_categoria_empleado, nombre_categoria, descripcion, std_reg FROM categoria_empleado WHERE id_ai_categoria_empleado = :id LIMIT 1; SELECT COUNT(1) FROM empleado WHERE id_ai_categoria_empleado = :id_ai_categoria_empleado AND std_reg = 1;

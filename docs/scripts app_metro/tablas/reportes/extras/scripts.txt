@@ -1,0 +1,25 @@
+Modulo: reportes
+Operacion: extras
+
+Script: cargarDatosReporte.php / cargarFiltrosReporte.php / exportarReportePdf.php
+Descripcion: detecta columnas disponibles para mantener compatibilidad entre esquemas antes de construir consultas dinamicas.
+
+SQL [1] - Verificar existencia de una columna
+SELECT COUNT(1)
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = DATABASE()
+  AND TABLE_NAME = :t
+  AND COLUMN_NAME = :c;
+
+Script: reporteGeneradoController.php
+Descripcion: verifica que exista la tabla de historial de reportes antes de guardar, listar o abrir PDFs.
+
+SQL [2] - Validar tabla reporte_generado
+SELECT COUNT(1)
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = :schema
+  AND TABLE_NAME = :table
+  AND COLUMN_NAME = :column;
+
+Script: reportePreview.php / reportePdf.php
+Descripcion: endpoints wrapper sin SQL directa; delegan la consulta al controlador correspondiente.

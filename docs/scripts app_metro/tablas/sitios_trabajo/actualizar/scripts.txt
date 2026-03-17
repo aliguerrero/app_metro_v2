@@ -1,0 +1,6 @@
+Modulo: sitios_trabajo
+Operacion: actualizar
+
+Sentencias SQL:
+
+UPDATE sitio_trabajo SET nombre_sitio = :n WHERE id_ai_sitio = :id;

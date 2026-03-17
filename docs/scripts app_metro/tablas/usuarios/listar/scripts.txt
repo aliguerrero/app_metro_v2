@@ -1,0 +1,6 @@
+Modulo: usuarios
+Operacion: listar
+
+Sentencias SQL:
+
+SELECT u.id_ai_user, u.id_user, u.username, u.tipo, COALESCE(e.nombre_empleado, u.user) AS nombre_empleado, COALESCE(c.nombre_categoria, 'SIN CATEGORIA') AS nombre_categoria, r.nombre_rol FROM user_system u INNER JOIN roles_permisos r ON r.id = u.tipo LEFT JOIN empleado e ON e.id_empleado = u.id_user LEFT JOIN categoria_empleado c ON c.id_ai_categoria_empleado = e.id_ai_categoria_empleado WHERE u.id_user <> :sessionId AND u.std_reg = 1 ORDER BY COALESCE(e.nombre_empleado, u.user) ASC;

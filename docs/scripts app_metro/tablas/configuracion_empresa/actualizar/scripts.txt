@@ -1,0 +1,6 @@
+Modulo: configuracion_empresa
+Operacion: actualizar
+
+Sentencias SQL:
+
+UPDATE empresa_config SET nombre = :nombre, rif = :rif, direccion = :direccion, telefono = :telefono, email = :email, logo = :logo WHERE id = :id;

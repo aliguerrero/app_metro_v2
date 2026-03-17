@@ -1,0 +1,6 @@
+Modulo: empleados
+Operacion: actualizar
+
+Sentencias SQL:
+
+UPDATE empleado SET nacionalidad = :nacionalidad, nombre_empleado = :nombre_empleado, telefono = :telefono, direccion = :direccion, correo = :correo, id_ai_categoria_empleado = :id_ai_categoria_empleado WHERE id_empleado = :id_empleado;

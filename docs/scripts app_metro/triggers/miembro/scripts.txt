@@ -1,0 +1,78 @@
+﻿Modulo: triggers
+Tabla: miembro
+
+Sentencias SQL y funcion:
+
+- trg_miembro_ai
+Funcion: Registra en log_user la creacion de registros de miembro.
+Momento: AFTER INSERT
+Definer: root@localhost
+SQL:
+CREATE DEFINER=root@localhost TRIGGER trg_miembro_ai
+AFTER INSERT ON miembro
+FOR EACH ROW
+INSERT INTO `log_user`(
+  `event_uuid`,`id_user`,`tabla`,`operacion`,`pk_registro`,`pk_json`,
+  `accion`,`resp_system`,
+  `data_old`,`data_new`,`data_diff`,`changed_cols`,
+  `connection_id`,`db_user`,`db_host`
+) VALUES (
+  UUID(),
+  (SELECT `id_user` FROM `user_system` WHERE `id_user` = @app_user LIMIT 1),
+  'miembro',
+  'INSERT',
+  CONCAT('id_ai_miembro=', NEW.`id_ai_miembro`),
+  JSON_OBJECT('id_ai_miembro', NEW.`id_ai_miembro`),
+  CONCAT('CREAR ', 'miembro'),
+  CONCAT('INSERT miembro ', CONCAT('id_ai_miembro=', NEW.`id_ai_miembro`)),
+  NULL,
+  JSON_OBJECT('id_ai_miembro', NEW.`id_ai_miembro`, 'id_miembro', NEW.`id_miembro`, 'nombre_miembro', NEW.`nombre_miembro`, 'tipo_miembro', NEW.`tipo_miembro`, 'std_reg', NEW.`std_reg`),
+  JSON_OBJECT('id_ai_miembro', NEW.`id_ai_miembro`, 'id_miembro', NEW.`id_miembro`, 'nombre_miembro', NEW.`nombre_miembro`, 'tipo_miembro', NEW.`tipo_miembro`, 'std_reg', NEW.`std_reg`),
+  'id_ai_miembro,id_miembro,nombre_miembro,tipo_miembro,std_reg',
+  CONNECTION_ID(),
+  USER(),
+  SUBSTRING_INDEX(USER(),'@',-1)
+);
+
+- trg_miembro_au
+Funcion: Registra en log_user las actualizaciones de miembro y detecta cambios de std_reg como eliminacion logica o reactivacion.
+Momento: AFTER UPDATE
+Definer: root@localhost
+SQL:
+CREATE DEFINER=root@localhost TRIGGER trg_miembro_au
+AFTER UPDATE ON miembro
+FOR EACH ROW
+INSERT INTO `log_user`(
+  `event_uuid`,`id_user`,`tabla`,`operacion`,`pk_registro`,`pk_json`,
+  `accion`,`resp_system`,
+  `data_old`,`data_new`,`data_diff`,`changed_cols`,
+  `connection_id`,`db_user`,`db_host`
+) VALUES (
+  UUID(),
+  (SELECT `id_user` FROM `user_system` WHERE `id_user` = @app_user LIMIT 1),
+  'miembro',
+  CASE WHEN NEW.`std_reg` = 0 AND OLD.`std_reg` = 1 THEN 'SOFT_DELETE' WHEN NEW.`std_reg` = 1 AND OLD.`std_reg` = 0 THEN 'RESTORE' ELSE 'UPDATE' END,
+  CONCAT('id_ai_miembro=', NEW.`id_ai_miembro`),
+  JSON_OBJECT('id_ai_miembro', NEW.`id_ai_miembro`),
+  CASE WHEN NEW.`std_reg` = 0 AND OLD.`std_reg` = 1 THEN CONCAT('ELIMINAR (LOGICO) ', 'miembro') WHEN NEW.`std_reg` = 1 AND OLD.`std_reg` = 0 THEN CONCAT('REACTIVAR ', 'miembro') ELSE CONCAT('MODIFICAR ', 'miembro') END,
+  CASE WHEN NEW.`std_reg` = 0 AND OLD.`std_reg` = 1 THEN CONCAT('SOFT_DELETE miembro ', CONCAT('id_ai_miembro=', NEW.`id_ai_miembro`)) WHEN NEW.`std_reg` = 1 AND OLD.`std_reg` = 0 THEN CONCAT('RESTORE miembro ', CONCAT('id_ai_miembro=', NEW.`id_ai_miembro`)) ELSE CONCAT('UPDATE miembro ', CONCAT('id_ai_miembro=', NEW.`id_ai_miembro`)) END,
+  JSON_OBJECT('id_ai_miembro', OLD.`id_ai_miembro`, 'id_miembro', OLD.`id_miembro`, 'nombre_miembro', OLD.`nombre_miembro`, 'tipo_miembro', OLD.`tipo_miembro`, 'std_reg', OLD.`std_reg`),
+  JSON_OBJECT('id_ai_miembro', NEW.`id_ai_miembro`, 'id_miembro', NEW.`id_miembro`, 'nombre_miembro', NEW.`nombre_miembro`, 'tipo_miembro', NEW.`tipo_miembro`, 'std_reg', NEW.`std_reg`),
+  JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_OBJECT(), IF(NOT (OLD.`id_ai_miembro` <=> NEW.`id_ai_miembro`), JSON_OBJECT('id_ai_miembro', JSON_ARRAY(OLD.`id_ai_miembro`, NEW.`id_ai_miembro`)), JSON_OBJECT())), IF(NOT (OLD.`id_miembro` <=> NEW.`id_miembro`), JSON_OBJECT('id_miembro', JSON_ARRAY(OLD.`id_miembro`, NEW.`id_miembro`)), JSON_OBJECT())), IF(NOT (OLD.`nombre_miembro` <=> NEW.`nombre_miembro`), JSON_OBJECT('nombre_miembro', JSON_ARRAY(OLD.`nombre_miembro`, NEW.`nombre_miembro`)), JSON_OBJECT())), IF(NOT (OLD.`tipo_miembro` <=> NEW.`tipo_miembro`), JSON_OBJECT('tipo_miembro', JSON_ARRAY(OLD.`tipo_miembro`, NEW.`tipo_miembro`)), JSON_OBJECT())), IF(NOT (OLD.`std_reg` <=> NEW.`std_reg`), JSON_OBJECT('std_reg', JSON_ARRAY(OLD.`std_reg`, NEW.`std_reg`)), JSON_OBJECT())),
+  NULLIF(CONCAT_WS(',', IF(NOT (OLD.`id_ai_miembro` <=> NEW.`id_ai_miembro`), 'id_ai_miembro', NULL), IF(NOT (OLD.`id_miembro` <=> NEW.`id_miembro`), 'id_miembro', NULL), IF(NOT (OLD.`nombre_miembro` <=> NEW.`nombre_miembro`), 'nombre_miembro', NULL), IF(NOT (OLD.`tipo_miembro` <=> NEW.`tipo_miembro`), 'tipo_miembro', NULL), IF(NOT (OLD.`std_reg` <=> NEW.`std_reg`), 'std_reg', NULL)), ''),
+  CONNECTION_ID(),
+  USER(),
+  SUBSTRING_INDEX(USER(),'@',-1)
+);
+
+- trg_miembro_bd
+Funcion: Impide el DELETE fisico en miembro y obliga a manejar el registro mediante eliminacion logica.
+Momento: BEFORE DELETE
+Definer: root@localhost
+SQL:
+CREATE DEFINER=root@localhost TRIGGER trg_miembro_bd
+BEFORE DELETE ON miembro
+FOR EACH ROW
+SIGNAL SQLSTATE '45000'
+  SET MESSAGE_TEXT = 'No se permite DELETE físico en miembro. Use eliminación lógica (UPDATE miembro SET std_reg=0 ...).';
+

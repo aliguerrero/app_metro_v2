@@ -1,0 +1,31 @@
+Modulo: categorias_herramienta
+Operacion: crear
+
+Sentencias SQL:
+
+
+- Buscar categoria existente por nombre
+SELECT
+    id_ai_categoria_herramienta,
+    std_reg
+FROM categoria_herramienta
+WHERE nombre_categoria = :nombre
+LIMIT 1;
+
+- Reactivar categoria existente
+UPDATE categoria_herramienta
+SET nombre_categoria = :nombre,
+    descripcion = :descripcion,
+    std_reg = 1
+WHERE id_ai_categoria_herramienta = :id;
+
+- Insertar categoria
+INSERT INTO categoria_herramienta (
+    nombre_categoria,
+    descripcion,
+    std_reg
+) VALUES (
+    :nombre,
+    :descripcion,
+    1
+);

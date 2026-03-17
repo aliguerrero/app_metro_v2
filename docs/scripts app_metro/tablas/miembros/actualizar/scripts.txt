@@ -1,0 +1,6 @@
+Modulo: miembros
+Operacion: actualizar
+
+Sentencias SQL:
+
+UPDATE miembro SET nombre_miembro = :nombre_miembro, tipo_miembro = :tipo_miembro WHERE id_miembro = :id_miembro;

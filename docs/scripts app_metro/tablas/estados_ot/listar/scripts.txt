@@ -1,0 +1,6 @@
+Modulo: estados_ot
+Operacion: listar
+
+Sentencias SQL:
+
+SELECT id_ai_estado, nombre_estado, color, std_reg FROM estado_ot WHERE std_reg = 1 ORDER BY id_ai_estado ASC;

@@ -1,0 +1,279 @@
+Modulo: reportes
+Operacion: buscar
+
+Sentencias SQL:
+
+- Areas activas
+SELECT
+    id_ai_area AS id_area,
+    id_ai_area AS id_ai_area,
+    nombre_area
+FROM area_trabajo
+WHERE std_reg = 1
+ORDER BY nombre_area ASC;
+
+- Sitios activos
+SELECT
+    id_ai_sitio AS id_sitio,
+    id_ai_sitio AS id_ai_sitio,
+    nombre_sitio
+FROM sitio_trabajo
+WHERE std_reg = 1
+ORDER BY nombre_sitio ASC;
+
+- Estados OT
+SELECT
+    id_ai_estado AS id_estado,
+    id_ai_estado AS id_ai_estado,
+    nombre_estado,
+    color
+FROM estado_ot
+WHERE std_reg = 1
+ORDER BY id_ai_estado ASC;
+
+- Usuarios disponibles para filtrar
+SELECT
+    u.id_user,
+    COALESCE(e.nombre_empleado, u.user) AS user,
+    u.username
+FROM user_system u
+LEFT JOIN empleado e
+    ON e.id_empleado = u.id_user
+WHERE u.std_reg = 1
+ORDER BY COALESCE(e.nombre_empleado, u.user) ASC;
+
+
+- Empresa para encabezado del reporte
+SELECT
+    id,
+    nombre,
+    rif,
+    direccion,
+    telefono,
+    email,
+    logo,
+    created_at,
+    updated_at
+FROM empresa_config
+WHERE id = 1
+LIMIT 1;
+
+- OT resumen
+SELECT
+    ot.n_ot,
+    ot.fecha,
+    ot.semana,
+    ot.mes,
+    ot.nombre_trab,
+    a.nombre_area,
+    s.nombre_sitio,
+    (
+        SELECT e.nombre_estado
+        FROM detalle_orden d
+        LEFT JOIN estado_ot e
+            ON e.id_ai_estado = d.id_ai_estado
+        WHERE d.n_ot = ot.n_ot
+        ORDER BY d.id_ai_detalle DESC
+        LIMIT 1
+    ) AS estado_actual,
+    (
+        SELECT COUNT(1)
+        FROM detalle_orden d2
+        WHERE d2.n_ot = ot.n_ot
+    ) AS total_detalles,
+    (
+        SELECT COUNT(1)
+        FROM herramientaot h
+        WHERE h.n_ot = ot.n_ot
+    ) AS total_herr
+FROM orden_trabajo ot
+LEFT JOIN area_trabajo a
+    ON a.id_ai_area = ot.id_ai_area
+LEFT JOIN sitio_trabajo s
+    ON s.id_ai_sitio = ot.id_ai_sitio
+WHERE ot.std_reg = 1
+ORDER BY ot.fecha DESC, ot.n_ot DESC
+LIMIT 500;
+
+Filtros condicionales aplicados sobre la consulta OT resumen / OT detallado
+
+AND ot.n_ot = :n_ot;
+AND ot.fecha >= :desde;
+AND ot.fecha <= :hasta;
+AND ot.id_ai_area = :area;
+AND ot.id_ai_sitio = :sitio;
+AND EXISTS (
+    SELECT 1
+    FROM detalle_orden d
+    WHERE d.n_ot = ot.n_ot
+      AND d.id_ai_estado = :estado
+);
+AND EXISTS (
+    SELECT 1
+    FROM detalle_orden d2
+    WHERE d2.n_ot = ot.n_ot
+      AND d2.id_user_act = :usuario
+);
+
+- Cabecera OT detallado por numero de OT
+SELECT
+    ot.id_ai_ot,
+    ot.n_ot,
+    ot.id_ai_area,
+    ot.id_user,
+    ot.id_ai_sitio,
+    ot.nombre_trab,
+    ot.fecha,
+    ot.semana,
+    ot.mes,
+    ot.std_reg,
+    a.nombre_area,
+    s.nombre_sitio
+FROM orden_trabajo ot
+LEFT JOIN area_trabajo a
+    ON a.id_ai_area = ot.id_ai_area
+LEFT JOIN sitio_trabajo s
+    ON s.id_ai_sitio = ot.id_ai_sitio
+WHERE ot.n_ot = :id
+  AND ot.std_reg = 1
+LIMIT 1;
+
+- Detalles de una OT
+SELECT
+    d.id_ai_detalle,
+    d.n_ot,
+    d.fecha,
+    d.descripcion,
+    d.id_ai_turno,
+    d.id_miembro_cco,
+    d.id_user_act,
+    d.id_miembro_ccf,
+    d.id_ai_estado,
+    d.cant_tec,
+    d.hora_ini_pre,
+    d.hora_fin_pre,
+    d.hora_ini_tra,
+    d.hora_fin_tra,
+    d.hora_ini_eje,
+    d.hora_fin_eje,
+    d.observacion,
+    t.nombre_turno,
+    e.nombre_estado,
+    u.user AS tecnico_nombre,
+    cco.nombre_miembro AS cco_nombre,
+    ccf.nombre_miembro AS ccf_nombre
+FROM detalle_orden d
+LEFT JOIN turno_trabajo t
+    ON t.id_ai_turno = d.id_ai_turno
+LEFT JOIN estado_ot e
+    ON e.id_ai_estado = d.id_ai_estado
+LEFT JOIN user_system u
+    ON u.id_user = d.id_user_act
+LEFT JOIN miembro cco
+    ON cco.id_miembro = d.id_miembro_cco
+LEFT JOIN miembro ccf
+    ON ccf.id_miembro = d.id_miembro_ccf
+WHERE d.n_ot = :id
+ORDER BY d.id_ai_detalle ASC;
+
+SQL [9] - Herramientas asociadas a una OT
+SELECT
+    h.id_ai_herramienta AS herramienta_id,
+    he.nombre_herramienta,
+    h.cantidadot
+FROM herramientaot h
+LEFT JOIN herramienta he
+    ON he.id_ai_herramienta = h.id_ai_herramienta
+WHERE h.n_ot = :id
+ORDER BY he.nombre_herramienta ASC;
+
+- OT detallado por rango
+SELECT
+    ot.n_ot,
+    ot.fecha,
+    ot.nombre_trab,
+    a.nombre_area,
+    s.nombre_sitio
+FROM orden_trabajo ot
+LEFT JOIN area_trabajo a
+    ON a.id_ai_area = ot.id_ai_area
+LEFT JOIN sitio_trabajo s
+    ON s.id_ai_sitio = ot.id_ai_sitio
+WHERE ot.std_reg = 1
+ORDER BY ot.fecha DESC
+LIMIT 50;
+
+- Reporte de herramientas
+SELECT
+    id_ai_herramienta AS herramienta_id,
+    nombre_herramienta,
+    cantidad,
+    estado
+FROM herramienta
+WHERE std_reg = 1
+ORDER BY nombre_herramienta ASC
+LIMIT 800;
+
+Filtro condicional de herramientas
+AND (
+    id_ai_herramienta LIKE :q
+    OR nombre_herramienta LIKE :q
+);
+
+- Reporte de miembros
+SELECT
+    id_ai_miembro,
+    id_miembro,
+    nombre_miembro,
+    tipo_miembro,
+    std_reg
+FROM miembro
+WHERE std_reg = 1
+ORDER BY nombre_miembro ASC
+LIMIT 800;
+
+Filtro condicional de miembros
+AND (
+    id_miembro LIKE :q
+    OR nombre_miembro LIKE :q
+);
+
+- Reporte de usuarios
+SELECT
+    u.id_user,
+    u.user,
+    u.username,
+    r.nombre_rol
+FROM user_system u
+LEFT JOIN roles_permisos r
+    ON r.id = u.tipo
+WHERE u.std_reg = 1
+ORDER BY u.user ASC
+LIMIT 800;
+
+Filtro condicional de usuarios
+AND (
+    u.id_user LIKE :q
+    OR u.user LIKE :q
+    OR u.username LIKE :q
+);
+
+
+- Buscar un reporte guardado por id
+SELECT
+    id_ai_reporte_generado,
+    tipo_reporte,
+    titulo_reporte,
+    nombre_archivo,
+    ruta_archivo,
+    mime_type,
+    tamano_bytes,
+    id_user_generador,
+    nombre_user_generador,
+    username_generador,
+    created_at,
+    std_reg
+FROM reporte_generado
+WHERE id_ai_reporte_generado = :id
+  AND std_reg = 1
+LIMIT 1;

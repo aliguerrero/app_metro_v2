@@ -1,0 +1,13 @@
+Modulo: usuarios
+Operacion: crear
+
+Sentencias SQL:
+
+-Seleccion de rol
+SELECT 1 FROM roles_permisos WHERE id = :id LIMIT 1;
+
+-Seleccion de empleado
+SELECT e.id_ai_empleado, e.id_empleado, e.nombre_empleado, e.id_ai_categoria_empleado, e.std_reg, COALESCE(c.nombre_categoria, 'SIN CATEGORIA') AS nombre_categoria FROM empleado e LEFT JOIN categoria_empleado c ON c.id_ai_categoria_empleado = e.id_ai_categoria_empleado WHERE e.id_empleado = :id AND e.std_reg = 1 LIMIT 1;
+
+-Creacion de usuario
+INSERT INTO user_system (id_user, user, username, password, tipo, std_reg) VALUES (:id, :nombre, :username, :password, :tipo, 1);

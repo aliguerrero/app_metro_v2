@@ -1,0 +1,6 @@
+Modulo: miembros
+Operacion: buscar
+
+Sentencias SQL:
+
+SELECT id_ai_miembro, id_miembro, nombre_miembro, tipo_miembro, std_reg FROM miembro WHERE id_miembro = :id AND std_reg = 1 LIMIT 1; SELECT id_ai_miembro, id_miembro, nombre_miembro, tipo_miembro, std_reg FROM miembro WHERE (id_miembro LIKE :term OR nombre_miembro LIKE :term) AND std_reg = 1 ORDER BY nombre_miembro ASC;

@@ -1,0 +1,699 @@
+  /* --- Variables de Color y Estilos Generales --- */
+  :root {
+      --brand-orange: #F57C00;
+      /* Naranja (color principal del logo) */
+      --brand-orange-light: #FF9800;
+      /* Naranja más claro */
+      --brand-orange: #F57C00;
+      --brand-orange-2: #FF9800;
+      --brand-black: #0B0F14;
+      --brand-ink: #111827;
+      --brand-gray: #6B7280;
+      --brand-light: #F6F7FB;
+      --line: rgba(17, 24, 39, .10);
+  }
+
+  @media (min-width: 992px) {
+      .modal-xxl-wide {
+          max-width: 95vw !important;
+      }
+  }
+
+  .config-menu .list-group-item {
+      border-radius: .75rem;
+      margin-bottom: .5rem;
+  }
+
+  .config-menu .list-group-item.active small {
+      opacity: .85;
+  }
+
+  /* Alinea visualmente todos los controles (mismo alto y “base”) */
+  .estado-form-row .form-control,
+  .estado-form-row .btn {
+      height: 38px;
+  }
+
+  /* Contenedor para centrar verticalmente el color picker */
+  .estado-color-wrap {
+      height: 38px;
+      display: flex;
+      align-items: center;
+  }
+
+  /* Color pequeño y “bonito”, sin salirse */
+  .estado-color {
+      width: 56px;
+      /* <- pequeño */
+      height: 32px;
+      /* <- compacto */
+      padding: 0;
+      border-radius: 8px;
+  }
+
+  /* MISMO alto para input / wrapper del color / botón */
+  .estado-h {
+      height: 38px;
+  }
+
+  /* Centra el input color verticalmente y evita deformaciones */
+  .estado-color-wrap {
+      display: flex;
+      align-items: center;
+  }
+
+  /* Color pequeño y consistente */
+  .estado-color {
+      width: 52px;
+      height: 30px;
+      padding: 0;
+      border-radius: 8px;
+  }
+
+  /* Sitios: mismo alto input/botón */
+  .sitio-h {
+      height: 38px;
+  }
+
+  .area-h {
+      height: 38px;
+  }
+
+  .turno-h {
+      height: 38px;
+  }
+
+
+  /* Mantener el tamaño de la franja del header constante */
+  .header {
+      position: relative;
+      /* Ajusta la altura de la franja según el diseño */
+      background-color: #f8f9fa;
+      /* Fondo del header */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      /* Ajusta el padding según sea necesario */
+  }
+
+  /* Posiciona la imagen de forma flotante dentro del header */
+  .logo-flotante {
+      position: absolute;
+      top: 70%;
+      /* Centrado vertical */
+      left: 50%;
+      /* Centrado horizontal */
+      transform: translate(-50%, -50%);
+      /* Ajuste perfecto del centro */
+      z-index: 10;
+      /* Asegura que la imagen esté encima de todo */
+  }
+
+
+  /* --- General --- */
+  .tools-scope {
+      --brand-orange: #F57C00;
+      --brand-orange-2: #FF9800;
+      --brand-black: #0B0F14;
+      --brand-ink: #111827;
+      --brand-gray: #6B7280;
+      --line: rgba(17, 24, 39, .10);
+  }
+
+  /* ===== Roles: input-group unido (solo extremos redondos) ===== */
+  .roles-join .roles-join-select>.form-select,
+  .roles-join .roles-join-select>select.form-select,
+  .roles-join .roles-join-select select {
+      border-top-right-radius: 0 !important;
+      border-bottom-right-radius: 0 !important;
+  }
+
+  .roles-join .roles-join-btn {
+      border-top-left-radius: 0 !important;
+      border-bottom-left-radius: 0 !important;
+  }
+
+  /* Evita que el wrapper meta bordes/espacios raros */
+  .roles-join .roles-join-select {
+      display: flex;
+  }
+
+  .roles-join .roles-join-select>* {
+      width: 100%;
+  }
+
+  /* --- Header de la Página --- */
+  .tools-scope .page-head {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      box-shadow: 0 12px 30px rgba(2, 6, 23, .06);
+      padding: 1rem 1.25rem;
+  }
+
+  .tools-scope .page-head h3 {
+      margin: 0;
+      font-weight: 900;
+      color: var(--brand-ink);
+  }
+
+  /* --- Cards (Formulario, Buscador) --- */
+  .tools-scope .card {
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      box-shadow: 0 12px 30px rgba(2, 6, 23, .06);
+      overflow: hidden;
+  }
+
+  .tools-scope .card-header {
+      background: linear-gradient(145deg, rgba(245, 124, 0, .10), rgba(255, 152, 0, .06));
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+  }
+
+  .tools-scope .card-header strong {
+      color: var(--brand-ink);
+      font-weight: 900;
+  }
+
+  /* --- Inputs y Formularios --- */
+  .tools-scope .form-label b {
+      color: var(--brand-ink);
+  }
+
+  .tools-scope .form-control:focus {
+      box-shadow: 0 0 0 .22rem rgba(245, 124, 0, .18);
+      border-color: rgba(245, 124, 0, .45);
+  }
+
+  .tools-scope .form-control,
+  .tools-scope .form-select {
+      border-radius: .9rem;
+      width: 100%;
+  }
+
+  /* --- Botones ---
+     Mantiene forma/espaciado sin forzar color global, para respetar
+     btn-success / btn-warning / btn-danger / btn-info segun la accion.
+  */
+
+  /* --- Agrupación de Botones y Formularios --- */
+  .tools-scope .form-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+  }
+
+  .tools-scope .form-row .col-md-4,
+  .tools-scope .form-row .col-md-8,
+  .tools-scope .col-md-4 {
+      flex: 1;
+  }
+
+  .tools-scope .col-md-4 .btn {
+      width: 100%;
+      border-radius: .9rem;
+  }
+
+  /* --- Tabla (Desktop) --- */
+  .tools-scope .table-wrapper3 {
+      border-radius: .9rem;
+      overflow: hidden;
+      border: 1px solid var(--line);
+  }
+
+  .tools-scope table.table {
+      margin: 0;
+  }
+
+  .tools-scope table.table thead {
+      background: #F8FAFC;
+  }
+
+  .tools-scope table.table th,
+  .tools-scope table.table td {
+      padding: .75rem .75rem;
+      vertical-align: middle;
+  }
+
+  .tools-scope table.table tbody tr:hover {
+      background: rgba(245, 124, 0, .06);
+  }
+
+  /* --- Cards (Móvil) --- */
+  .tools-scope .tool-cards {
+      display: grid;
+      gap: .75rem;
+  }
+
+  .tools-scope .tool-card {
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      background: #fff;
+      box-shadow: 0 10px 20px rgba(2, 6, 23, .05);
+      overflow: hidden;
+  }
+
+  .tools-scope .tool-card-head {
+      padding: .75rem .9rem;
+      background: linear-gradient(145deg, rgba(11, 15, 20, .95), rgba(17, 24, 39, .92));
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .75rem;
+  }
+
+  .tools-scope .tool-body {
+      padding: .85rem .9rem;
+  }
+
+  .tools-scope .tool-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: .35rem 0;
+      border-bottom: 1px dashed rgba(17, 24, 39, .12);
+  }
+
+  .tools-scope .tool-row:last-child {
+      border-bottom: 0;
+  }
+
+  .tools-scope .tool-label {
+      color: rgba(17, 24, 39, .65);
+      font-weight: 800;
+      font-size: .88rem;
+  }
+
+  .tools-scope .tool-value {
+      color: var(--brand-ink);
+      font-weight: 900;
+  }
+
+  .tools-scope .tool-actions {
+      margin-top: .75rem;
+      display: flex;
+      gap: .5rem;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+  }
+
+  /* --- Modal --- */
+  .tools-scope .modal-content {
+      border-radius: 1rem;
+      box-shadow: 0 12px 30px rgba(2, 6, 23, .06);
+      background: #fff;
+  }
+
+  .tools-scope .modal-header {
+      background: linear-gradient(145deg, rgba(245, 124, 0, .10), rgba(255, 152, 0, .06));
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+  }
+
+  .tools-scope .modal-header img {
+      width: 40px;
+      height: 40px;
+  }
+
+  .tools-scope .modal-title {
+      font-weight: 900;
+      color: var(--brand-ink);
+      font-size: 1.25rem;
+  }
+
+  .tools-scope .modal-body {
+      padding: 1.25rem;
+  }
+
+  .tools-scope .form-label {
+      font-weight: 700;
+      color: var(--brand-ink);
+  }
+
+  .tools-scope .form-control,
+  .tools-scope .form-select {
+      border: 1px solid var(--line);
+      border-radius: .9rem;
+      padding: .75rem;
+  }
+
+  .tools-scope .form-control:focus {
+      box-shadow: 0 0 0 .2rem rgba(245, 124, 0, .18);
+      border-color: rgba(245, 124, 0, .45);
+  }
+
+  .tools-scope .btn {
+      padding: .75rem;
+      border-radius: .9rem;
+      font-weight: 700;
+      transition: color .15s ease, background-color .15s ease, border-color .15s ease;
+  }
+
+  .tools-scope .col-md-6,
+  .tools-scope .col-md-4 {
+      padding-right: 0;
+      padding-left: 0;
+  }
+
+  .tools-scope .btn-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+  }
+
+  @media (min-width: 576px) {
+      .tools-scope .modal-dialog {
+          max-width: 500px;
+      }
+  }
+
+  /* Ajustes específicos para inputs y botones */
+  .tools-scope .form-control,
+  .tools-scope .form-select {
+      font-size: 1rem;
+      border-radius: 1.25rem;
+  }
+
+  /* ===== SIDEBAR ===== */
+  #sidebar.sidebar {
+      background: linear-gradient(180deg, var(--brand-black) 0%, #141a22 100%) !important;
+      box-shadow: 8px 0 30px rgba(2, 6, 23, .18);
+  }
+
+  #sidebar .sidebar-brand {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: linear-gradient(145deg, var(--brand-orange) 0%, var(--brand-orange-light) 55%);
+      border-bottom: 1px solid rgba(255, 255, 255, .06);
+      backdrop-filter: blur(8px);
+      padding: 2rem 1.5rem;
+  }
+
+  #sidebar .sidebar-brand a.nav-link {
+      padding: 0;
+      margin-left: .35rem;
+  }
+
+  #sidebar .sidebar-brand h5 {
+      margin: 0;
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: .2px;
+  }
+
+  #sidebar .sidebar-nav {
+      padding: .75rem .75rem 1rem;
+  }
+
+  /* Items del sidebar */
+  #sidebar .sidebar-nav .nav-item {
+      margin: .25rem 0;
+  }
+
+  #sidebar .sidebar-nav .nav-link {
+      border-radius: .9rem;
+      padding: .7rem .85rem;
+      color: rgba(255, 255, 255, .82) !important;
+      display: flex;
+      align-items: center;
+      transition: transform .15s ease, background-color .15s ease, color .15s ease;
+  }
+
+  #sidebar .sidebar-nav .nav-link .nav-icon {
+      width: 1.25rem;
+      min-width: 1.25rem;
+      opacity: .95;
+  }
+
+  #sidebar .sidebar-nav .nav-link:hover {
+      background: rgba(255, 255, 255, .08);
+      color: #fff !important;
+      transform: translateX(2px);
+  }
+
+  /* Activo (CoreUI suele poner .active) */
+  #sidebar .sidebar-nav .nav-link.active {
+      background: linear-gradient(145deg, var(--brand-orange) .30, var(--brand-orange-light) .22);
+      color: #fff !important;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .10);
+  }
+
+  /* ===== HEADER / TOPBAR ===== */
+  .wrapper .header.header-sticky {
+      background: rgba(255, 255, 255, .88) !important;
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+      box-shadow: 0 10px 26px rgba(2, 6, 23, .06);
+  }
+
+  .wrapper .header .container-fluid {
+      padding-top: .65rem;
+      padding-bottom: .65rem;
+  }
+
+  .header-toggler {
+      border-radius: .9rem;
+      padding: .45rem .6rem;
+      transition: background-color .15s ease;
+  }
+
+  .header-toggler:hover {
+      background: rgba(15, 23, 42, .06);
+  }
+
+  /* Links del header */
+  .header-nav .nav-link {
+      border-radius: .8rem;
+      padding: .45rem .75rem !important;
+      color: var(--brand-black) !important;
+      font-weight: 600;
+      transition: background-color .15s ease, color .15s ease;
+  }
+
+  .header-nav .nav-link:hover {
+      background: rgba(245, 124, 0, .08);
+      color: var(--brand-orange) !important;
+  }
+
+  /* Avatar + dropdown */
+  .header-nav .avatar.avatar-md {
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      overflow: hidden;
+      box-shadow: 0 10px 18px rgba(2, 6, 23, .10);
+      border: 2px solid var(--brand-orange-light);
+  }
+
+  /* Centrado y espaciado */
+  .header .header-brand {
+      display: block;
+      margin: 0 auto;
+      text-align: center;
+  }
+
+  /* Asegurarse que los iconos no se superpongan */
+  .header-nav {
+      padding-left: 1rem;
+      /* Ajustar si es necesario */
+      padding-right: 1rem;
+      /* Ajustar si es necesario */
+  }
+
+  .header-nav label {
+      margin-left: .5rem;
+      font-weight: 700;
+      color: rgba(15, 23, 42, .85);
+  }
+
+  .dropdown-menu.dropdown-menu-end {
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      overflow: hidden;
+      box-shadow: 0 22px 55px rgba(2, 6, 23, .14);
+  }
+
+  .dropdown-header.bg-light {
+      background: linear-gradient(145deg, var(--brand-orange) .12, var(--brand-orange-light) .10) !important;
+      border-bottom: 1px solid var(--line);
+  }
+
+  .dropdown-item {
+      padding: .65rem .9rem;
+      font-weight: 600;
+      color: rgba(15, 23, 42, .80);
+      transition: background-color .15s ease, color .15s ease;
+  }
+
+  .dropdown-item:hover {
+      background: rgba(245, 124, 0, .08);
+      color: rgba(245, 124, 0, 1);
+  }
+
+  /* ===== MAIN / FOOTER ===== */
+  .wrapper {
+      background:
+          radial-gradient(900px 380px at 90% 0%, rgba(245, 124, 0, .10), transparent 55%),
+          radial-gradient(700px 320px at 10% 20%, rgba(245, 124, 0, .08), transparent 50%),
+          #f6f8fb !important;
+  }
+
+  #main.body {
+      padding-top: 1rem;
+  }
+
+  .footer {
+      background: rgba(255, 255, 255, .78);
+      border-top: 1px solid var(--line);
+  }
+
+
+  /* input-group unido: solo bordes externos */
+  .tools-scope .search-join .form-control {
+      border-top-right-radius: 0 !important;
+      border-bottom-right-radius: 0 !important;
+  }
+
+  .tools-scope .search-join .btn {
+      border-top-left-radius: 0 !important;
+      border-bottom-left-radius: 0 !important;
+  }
+
+  /* Evita que el input 100% tumbe el botón (fix global) */
+  .tools-scope .input-group>.form-control,
+  .tools-scope .input-group>.form-select {
+      width: 1% !important;
+      flex: 1 1 auto !important;
+      min-width: 0;
+  }
+
+  /* =========================================================
+   OT BUSCADOR UNIDO (Área + Tipo + Campo/Buscar)
+   - Sin redondeo interno
+   - Redondeo SOLO en extremos: Área (izq) y botón Buscar (der)
+   - Aplica solo en desktop (lg+). En móvil se apilan normal.
+========================================================= */
+  @media (min-width: 992px) {
+
+      /* Quita “gaps” del grid solo en las columnas que unimos */
+      .tools-scope .ot-search-row .ot-join-col {
+          padding-left: 0 !important;
+          padding-right: 0 !important;
+      }
+
+      /* Une bordes: superpone 1px para que no se vea doble línea */
+      .tools-scope .ot-search-row .ot-join-col+.ot-join-col {
+          margin-left: -1px;
+      }
+
+      /* Quita redondeo a TODO dentro del grupo */
+      .tools-scope .ot-search-row .ot-join-col .form-select,
+      .tools-scope .ot-search-row .ot-join-col .form-control,
+      .tools-scope .ot-search-row .ot-join-col .btn {
+          border-radius: 0 !important;
+      }
+
+      /* Extremo izquierdo: SOLO el combo Área */
+      .tools-scope .ot-search-row .ot-join-first .form-select {
+          border-top-left-radius: 1rem !important;
+          border-bottom-left-radius: 1rem !important;
+      }
+
+      /* En el input-group, el input NO debe redondear a la derecha */
+      .tools-scope .ot-search-row .ot-join-last .input-group .form-control {
+          border-top-right-radius: 0 !important;
+          border-bottom-right-radius: 0 !important;
+      }
+
+      /* Extremo derecho: SOLO el botón Buscar */
+      .tools-scope .ot-search-row .ot-join-last .input-group .btn {
+          border-top-right-radius: 1rem !important;
+          border-bottom-right-radius: 1rem !important;
+      }
+
+      /* Evita separación interna entre input y botón buscar */
+      .tools-scope .ot-search-row .ot-join-last .input-group .btn {
+          margin-left: -1px;
+      }
+  }
+
+  /* Modal Detalles OT: padding compacto y mejor lectura */
+  .tools-scope #detallesOt .modal-body {
+      padding: 1rem;
+  }
+
+  @media (max-width: 991.98px) {
+      .tools-scope #detallesOt .modal-title {
+          font-size: 1rem;
+      }
+
+      .tools-scope #detallesOt .card-body {
+          padding: .9rem;
+      }
+  }
+
+
+  /* ===== Ajuste desktop: más aire y mejor lectura ===== */
+  @media (min-width: 992px) {
+      .wrapper .header .container-fluid {
+          padding-left: 1.25rem;
+          padding-right: 1.25rem;
+      }
+
+      #main.body {
+          padding-left: 1.25rem !important;
+          padding-right: 1.25rem !important;
+      }
+
+      .tools-scope .tools-join .form-control {
+          min-width: 420px;
+          /* opcional */
+      }
+
+      #detallesOt .modal-dialog.detalles-ot-dialog {
+          max-width: min(1600px, 96vw) !important;
+          width: 96vw !important;
+          margin-left: auto !important;
+          margin-right: auto !important;
+      }
+  }
+
+  /* Para pantallas pequeñas */
+  @media (max-width: 768px) {
+      .card-body .form-label {
+          font-size: 14px;
+          /* Tamaño más pequeño para etiquetas */
+      }
+
+      .card-body .form-control {
+          font-size: 16px;
+          /* Aumentar el tamaño del texto en inputs */
+          padding: 12px;
+          /* Añadir padding para mejorar la usabilidad */
+      }
+
+      .card-body .col-12 {
+          margin-bottom: 15px;
+          /* Agregar margen entre las filas */
+      }
+  }
+
+  /* Para pantallas más grandes */
+  @media (min-width: 768px) {
+      .card-body .col-md-6 {
+          margin-bottom: 20px;
+          /* Margen inferior en columnas medianas */
+      }
+
+      .card-body .col-lg-4 {
+          margin-bottom: 20px;
+          /* Margen inferior en columnas grandes */
+      }
+  }

@@ -1,0 +1,6 @@
+Modulo: usuarios
+Operacion: buscar
+
+Sentencias SQL:
+
+SELECT id_ai_user, id_user, user, username, password, tipo, std_reg FROM user_system WHERE id_user = :id LIMIT 1; SELECT 1 FROM user_system WHERE username = :username AND id_user <> :exclude LIMIT 1;

@@ -1,0 +1,6 @@
+Modulo: logs_auditoria
+Operacion: listar
+
+Sentencias SQL:
+
+SELECT id_log, event_uuid, id_user, tabla, operacion, pk_registro, pk_json, accion, resp_system, data_old, data_new, data_diff, fecha_hora, connection_id, db_user, db_host, changed_cols, std_reg FROM log_user l WHERE 1 = 1 ORDER BY l.fecha_hora DESC, l.id_log DESC LIMIT :limit; SELECT DISTINCT tabla FROM log_user WHERE tabla IS NOT NULL AND tabla <> '' ORDER BY tabla ASC;

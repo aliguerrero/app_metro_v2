@@ -1,0 +1,6 @@
+Modulo: ordenes_trabajo
+Operacion: buscar
+
+Sentencias SQL:
+
+SELECT id_ai_ot, n_ot, id_ai_area, id_user, id_ai_sitio, nombre_trab, fecha, semana, mes, std_reg FROM orden_trabajo WHERE n_ot = :id AND std_reg = 1 LIMIT 1; SELECT ot.id_ai_ot, ot.n_ot, ot.id_ai_area, ot.id_user, ot.id_ai_sitio, ot.nombre_trab, ot.fecha, ot.semana, ot.mes, ot.std_reg, eo.nombre_estado, eo.color FROM orden_trabajo ot LEFT JOIN (SELECT n_ot, MAX(id_ai_estado) AS id_ai_estado, MAX(id_user_act) AS id_user_act FROM detalle_orden GROUP BY n_ot) det ON ot.n_ot = det.n_ot LEFT JOIN estado_ot eo ON det.id_ai_estado = eo.id_ai_estado LEFT JOIN area_trabajo ae ON ot.id_ai_area = ae.id_ai_area WHERE ot.std_reg = 1 ORDER BY ot.n_ot ASC; SELECT d.id_ai_detalle, d.n_ot, d.fecha, d.descripcion, d.id_ai_turno, d.id_miembro_cco, d.id_user_act, d.id_miembro_ccf, d.id_ai_estado, d.cant_tec, d.hora_ini_pre, d.hora_fin_pre, d.hora_ini_tra, d.hora_fin_tra, d.hora_ini_eje, d.hora_fin_eje, d.observacion, u.user FROM detalle_orden d LEFT JOIN user_system u ON d.id_user_act = u.id_user WHERE d.n_ot = :not AND d.fecha = :fecha AND d.id_ai_detalle = :id LIMIT 1;
