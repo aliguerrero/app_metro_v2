@@ -1,0 +1,17 @@
+Modulo: reportes
+Operacion: crear
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/reporteGeneradoController.php -> guardarReporteGenerado
+CALL sp_reporte_registrar_generado(
+                :tipo_reporte,
+                :titulo_reporte,
+                :nombre_archivo,
+                :ruta_archivo,
+                :mime_type,
+                :tamano_bytes,
+                :parametros_json,
+                :id_user_generador
+            )

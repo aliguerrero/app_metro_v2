@@ -22,9 +22,9 @@ $categoriaEmpleado = $empleadoActual['nombre_categoria'] ?? ($_SESSION['categori
     </div>
 
     <?php if (isset($_SESSION['tipo']) && (int)$_SESSION['tipo'] === 1) { ?>
-        <span class="badge bg-success">Administrador</span>
+        <span class="badge section-role-badge bg-success">Administrador</span>
     <?php } else { ?>
-        <span class="badge bg-secondary">Usuario</span>
+        <span class="badge section-role-badge bg-secondary">Usuario</span>
     <?php } ?>
 </div>
 

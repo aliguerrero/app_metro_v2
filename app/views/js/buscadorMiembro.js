@@ -1,62 +1,61 @@
 document.addEventListener('DOMContentLoaded', function () {
+    const dir = document.getElementById('url').value;
+    const btnBuscarMiembro = document.getElementById('btnBuscarMiembro');
+    const btnRecargar = document.getElementById('btnRecargar');
+    const inputCampo = document.getElementById('campo');
 
-    let dir = document.getElementById('url').value;
-
-    let btnBuscarMiembro = document.getElementById('btnBuscarMiembro');
-    let btnRecargar = document.getElementById('btnRecargar');
-    let inputCampo = document.getElementById('campo');
-
-    let canEdit = document.getElementById('perm_miem_edit')
-        ? (document.getElementById('perm_miem_edit').value === '1')
+    const canEdit = document.getElementById('perm_miem_edit')
+        ? document.getElementById('perm_miem_edit').value === '1'
         : false;
 
-    let canDelete = document.getElementById('perm_miem_delete')
-        ? (document.getElementById('perm_miem_delete').value === '1')
+    const canDelete = document.getElementById('perm_miem_delete')
+        ? document.getElementById('perm_miem_delete').value === '1'
         : false;
 
-    // Debounce
     let typingTimer = null;
     const DEBOUNCE_MS = 300;
 
     function getRows(payload) {
-        // Acepta: []  ó  {data:[]}  ó  {rows:[]}
         if (Array.isArray(payload)) return payload;
         if (payload && Array.isArray(payload.data)) return payload.data;
         if (payload && Array.isArray(payload.rows)) return payload.rows;
         return [];
     }
 
-    function buscarMiembro() {
-        let tipoBusqueda = 'id';
-        let campo = limpiarCadena(inputCampo.value);
+    function fetchMiembros(tipoBusqueda, campo) {
+        return $.ajax({
+            url: dir + 'app/controllers/cargarDatosBuscadorMiem.php',
+            method: 'GET',
+            dataType: 'json',
+            data: {
+                tipoBusqueda: tipoBusqueda,
+                id: campo || ''
+            }
+        });
+    }
 
-        if (campo === "") {
+    function buscarMiembro() {
+        const campo = limpiarCadena(inputCampo.value || '');
+
+        if (campo === '') {
             reiniciarTabla(dir, canEdit, canDelete);
             return;
         }
 
-        $.ajax({
-            url: dir + 'app/controllers/cargarDatosBuscadorMiem.php',
-            method: 'GET',
-            dataType: 'json',
-            data: { id: campo, tipoBusqueda: tipoBusqueda },
-            success: function (data) {
+        fetchMiembros('id', campo)
+            .done(function (data) {
                 const rows = getRows(data);
+                renderMiemTable(dir, rows, canEdit, canDelete, rows.length === 0);
+                renderMiemCards(dir, rows, canEdit, canDelete, rows.length === 0);
 
-                if (rows.length > 0) {
-                    renderMiemTable(dir, rows, canEdit, canDelete);
-                    renderMiemCards(dir, rows, canEdit, canDelete);
-                } else {
-                    renderMiemTable(dir, [], canEdit, canDelete, true);
-                    renderMiemCards(dir, [], canEdit, canDelete, true);
-                    alerta("info", "No existen registros", 4000);
+                if (rows.length === 0) {
+                    alerta('info', 'No existen registros', 3000);
                 }
-            },
-            error: function (xhr, status, error) {
+            })
+            .fail(function (xhr, status, error) {
                 console.error('Error al obtener miembros:', error);
-                console.error('Respuesta (por si no era JSON válido):', xhr.responseText);
-            }
-        });
+                console.error(xhr.responseText);
+            });
     }
 
     if (inputCampo) {
@@ -67,231 +66,240 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (btnBuscarMiembro) {
-        btnBuscarMiembro.addEventListener('click', function () {
-            buscarMiembro();
-        });
+        btnBuscarMiembro.addEventListener('click', buscarMiembro);
     }
 
     if (btnRecargar) {
         btnRecargar.addEventListener('click', function () {
-            alerta("success", "Tabla recargada", 4000);
             if (inputCampo) inputCampo.value = '';
             reiniciarTabla(dir, canEdit, canDelete);
+            alerta('success', 'Tabla recargada', 2500);
         });
     }
 
-    // Carga inicial
     reiniciarTabla(dir, canEdit, canDelete);
 });
 
+function alerta(icono, texto, segundo) {
+    if (typeof Swal === 'undefined') {
+        console.warn(texto);
+        return;
+    }
+
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: icono || 'info',
+        title: texto || '',
+        showConfirmButton: false,
+        timer: segundo || 2500,
+        timerProgressBar: true
+    });
+}
+
+function tipoOperadorMiembro(tipo) {
+    return parseInt(tipo || 0, 10) === 1
+        ? 'Operador CCF'
+        : (parseInt(tipo || 0, 10) === 2 ? 'Operador CCO' : 'Tipo no definido');
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function badgeVinculoMiembro(miembro) {
+    return parseInt(miembro.empleado_vinculado || 0, 10) === 1
+        ? '<span class="badge bg-success">Vinculado</span>'
+        : '<span class="badge bg-secondary">Legacy</span>';
+}
+
+function contactoMiembro(miembro) {
+    const telefono = (miembro.telefono_empleado || '').trim();
+    const correo = (miembro.correo_empleado || '').trim();
+
+    if (telefono && correo) return `${telefono} | ${correo}`;
+    if (telefono) return telefono;
+    if (correo) return correo;
+    return 'Sin contacto';
+}
 
 function reiniciarTabla(dir, canEdit, canDelete) {
-    let tipoBusqueda = 'todo';
-
     $.ajax({
         url: dir + 'app/controllers/cargarDatosBuscadorMiem.php',
         method: 'GET',
         dataType: 'json',
-        data: { tipoBusqueda: tipoBusqueda },
+        data: { tipoBusqueda: 'todo' },
         success: function (data) {
-            const rows = (function getRows(payload) {
-                if (Array.isArray(payload)) return payload;
-                if (payload && Array.isArray(payload.data)) return payload.data;
-                if (payload && Array.isArray(payload.rows)) return payload.rows;
-                return [];
-            })(data);
-
-            if (rows.length > 0) {
-                renderMiemTable(dir, rows, canEdit, canDelete);
-                renderMiemCards(dir, rows, canEdit, canDelete);
-            } else {
-                renderMiemTable(dir, [], canEdit, canDelete, true);
-                renderMiemCards(dir, [], canEdit, canDelete, true);
-            }
+            const rows = Array.isArray(data?.data) ? data.data : [];
+            renderMiemTable(dir, rows, canEdit, canDelete, rows.length === 0);
+            renderMiemCards(dir, rows, canEdit, canDelete, rows.length === 0);
         },
         error: function (xhr, status, error) {
             console.error('Error al obtener miembros:', error);
-            console.error('Respuesta (por si no era JSON válido):', xhr.responseText);
+            console.error(xhr.responseText);
         }
     });
 }
 
-
-/* =========================
-   TABLA DESKTOP
-========================= */
 function renderMiemTable(dir, data, canEdit, canDelete, empty = false) {
-    let table = document.getElementById('tablaDatosMiem');
+    const table = document.getElementById('tablaDatosMiem');
     if (!table) return;
 
-    let tbody = table.getElementsByTagName('tbody')[0];
+    const tbody = table.getElementsByTagName('tbody')[0];
     if (!tbody) return;
 
     tbody.innerHTML = '';
 
-    // total columnas = 7 (no 8)
     if (empty || !Array.isArray(data) || data.length === 0) {
-        let fila = tbody.insertRow();
+        const fila = tbody.insertRow();
         fila.classList.add('align-middle');
-        fila.innerHTML = `<td class="text-center" colspan="7">No hay registros en el sistema</td>`;
+        fila.innerHTML = '<td class="text-center" colspan="8">No hay registros en el sistema</td>';
         return;
     }
 
-    let contador = 1;
-    data.forEach(function (miem) {
-        let fila = tbody.insertRow();
+    data.forEach(function (miem, index) {
+        const fila = tbody.insertRow();
         fila.classList.add('align-middle');
-        fila.innerHTML = buildRowMiembro(dir, contador, miem, canEdit, canDelete);
-        contador++;
+        fila.innerHTML = buildRowMiembro(dir, index + 1, miem, canEdit, canDelete);
     });
 }
 
-
-/* =========================
-   CARDS MÓVIL
-========================= */
 function renderMiemCards(dir, data, canEdit, canDelete, empty = false) {
-    let scope = document.querySelector('.miembro-responsive') || document;
-
-    let cardsWrap =
+    const scope = document.querySelector('.miembro-responsive') || document;
+    const cardsWrap =
         scope.querySelector('#toolCardsMiem') ||
         scope.querySelector('.tool-cards') ||
-        document.getElementById('toolCardsMiem') ||
-        document.querySelector('.tool-cards');
+        document.getElementById('toolCardsMiem');
 
     if (!cardsWrap) return;
 
     cardsWrap.innerHTML = '';
 
     if (empty || !Array.isArray(data) || data.length === 0) {
-        cardsWrap.innerHTML = cardMiembroVacia();
+        cardsWrap.innerHTML = `
+            <div class="tool-card">
+                <div class="tool-card-head">
+                    <span class="tool-code">Sin registros</span>
+                    <span>-</span>
+                </div>
+                <div class="tool-body">
+                    <div class="tool-row" style="border-bottom:0;">
+                        <div class="tool-label">Estado</div>
+                        <div class="tool-value">No hay miembros activos registrados</div>
+                    </div>
+                </div>
+            </div>`;
         return;
     }
 
-    let contador = 1;
-    let html = '';
-    data.forEach(function (miem) {
-        html += cardMiembro(dir, contador, miem, canEdit, canDelete);
-        contador++;
-    });
-
-    cardsWrap.innerHTML = html;
+    cardsWrap.innerHTML = data.map((miem, index) => cardMiembro(dir, index + 1, miem, canEdit, canDelete)).join('');
 }
 
-
-/* =========================
-   BUILDERS
-========================= */
 function buildRowMiembro(dir, contador, miem, canEdit, canDelete) {
+    const acciones = [];
 
-    let btnEdit = canEdit ? `
-    <td class="col-p">
-      <a href="#" title="Modificar" class="btn btn-warning text-dark"
-         data-bs-toggle="modal" data-bs-target="#ventanaModalModificarMiem" data-bs-id="${miem.id_miembro}">
-        <i class="bi bi-pencil text-white"></i>
-      </a>
-    </td>` : `<td class="col-p"></td>`;
+    if (canEdit) {
+        acciones.push(`
+            <a href="#" title="Modificar" class="btn btn-warning text-dark"
+               data-bs-toggle="modal" data-bs-target="#ventanaModalModificarMiem" data-bs-id="${miem.id_miembro}">
+                <i class="bi bi-pencil text-white"></i>
+            </a>`);
+    }
 
-    let btnDel = canDelete ? `
-    <td class="col-p">
-      <a href="#" title="Eliminar" class="btn btn-danger"
-         onclick="eliminarMiembro('${miem.id_miembro}','${dir}', ${canEdit}, ${canDelete}); return false;">
-        <i class="bi bi-trash" style="color: white;"></i>
-      </a>
-    </td>` : `<td class="col-p"></td>`;
+    if (canDelete) {
+        acciones.push(`
+            <a href="#" title="Eliminar" class="btn btn-danger"
+               onclick="eliminarMiembro('${miem.id_miembro}', '${dir}', ${canEdit ? 1 : 0}, ${canDelete ? 1 : 0}); return false;">
+                <i class="bi bi-trash" style="color:white;"></i>
+            </a>`);
+    }
 
     return `
-    <td class="clearfix col-p"><div><b>${contador}</b></div></td>
-
-    <td class="text-center col-p">
-      <div class="avatar avatar-md">
-        <img class="avatar-img" src="${dir}app/views/img/avatars/user.png" alt="user@email.com">
-      </div>
-    </td>
-
-    <td class="col-p"><div class="clearfix"><div><b>${miem.id_miembro}</b></div></div></td>
-
-    <td><div class="clearfix"><div><b>${miem.nombre_miembro}</b></div></div></td>
-
-    <td class="col-2">
-      <div class="text-center"><div><b>${tipoOperador(parseInt(miem.tipo_miembro, 10))}</b></div></div>
-    </td>
-
-    ${btnEdit}
-    ${btnDel}
-  `;
+        <td><b>${contador}</b></td>
+        <td class="text-center col-p">
+            <div class="avatar avatar-md">
+                <img class="avatar-img" src="${dir}app/views/img/avatars/user.png" alt="miembro">
+            </div>
+        </td>
+        <td><b>${escapeHtml(miem.id_miembro)}</b></td>
+        <td>
+            <div><b>${escapeHtml(miem.nombre_visual)}</b></div>
+            <div class="small text-muted">${badgeVinculoMiembro(miem)}</div>
+        </td>
+        <td>${escapeHtml(miem.documento_empleado || 'No vinculado')}</td>
+        <td class="text-center"><b>${tipoOperadorMiembro(miem.tipo_miembro)}</b></td>
+        <td class="miembro-contact-cell">${escapeHtml(contactoMiembro(miem))}</td>
+        <td class="action-cell text-center">
+            <div class="tools-action-group" role="group" aria-label="Acciones de miembro">
+                ${acciones.join('')}
+            </div>
+        </td>`;
 }
 
 function cardMiembro(dir, contador, miem, canEdit, canDelete) {
-    let tipo = tipoOperador(parseInt(miem.tipo_miembro, 10));
+    const acciones = [];
 
-    let btnEdit = canEdit ? `
-    <a href="#" title="Modificar" class="btn btn-warning text-dark btn-sm"
-       data-bs-toggle="modal" data-bs-target="#ventanaModalModificarMiem" data-bs-id="${miem.id_miembro}">
-      <i class="bi bi-pencil text-white"></i>
-    </a>` : '';
+    if (canEdit) {
+        acciones.push(`
+            <a href="#" title="Modificar" class="btn btn-warning text-dark btn-sm"
+               data-bs-toggle="modal" data-bs-target="#ventanaModalModificarMiem" data-bs-id="${miem.id_miembro}">
+                <i class="bi bi-pencil text-white"></i>
+            </a>`);
+    }
 
-    let btnDel = canDelete ? `
-    <button type="button" class="btn btn-danger btn-sm" title="Eliminar"
-            onclick="eliminarMiembro('${miem.id_miembro}','${dir}', ${canEdit}, ${canDelete})">
-      <i class="bi bi-trash"></i>
-    </button>` : '';
+    if (canDelete) {
+        acciones.push(`
+            <button type="button" class="btn btn-danger btn-sm" title="Eliminar"
+                    onclick="eliminarMiembro('${miem.id_miembro}', '${dir}', ${canEdit ? 1 : 0}, ${canDelete ? 1 : 0})">
+                <i class="bi bi-trash"></i>
+            </button>`);
+    }
 
     return `
-    <div class="tool-card">
-      <div class="tool-card-head">
-        <span class="tool-code">#${contador} • Código: ${miem.id_miembro}</span>
-        <span><b>Tipo:</b> ${tipo}</span>
-      </div>
-
-      <div class="tool-body">
-        <div class="tool-row">
-          <div class="tool-label">Nombre</div>
-          <div class="tool-value">${miem.nombre_miembro}</div>
-        </div>
-
-        <div class="tool-actions">
-          ${btnEdit}
-          ${btnDel}
-        </div>
-      </div>
-    </div>
-  `;
+            <div class="tool-card">
+                <div class="tool-card-head">
+                    <span class="tool-code">${escapeHtml(miem.id_miembro)}</span>
+                    <span>${badgeVinculoMiembro(miem)}</span>
+                </div>
+            <div class="tool-body">
+                <div class="tool-row">
+                    <div class="tool-label">Empleado</div>
+                    <div class="tool-value">${escapeHtml(miem.nombre_visual)}</div>
+                </div>
+                <div class="tool-row">
+                    <div class="tool-label">Documento</div>
+                    <div class="tool-value">${escapeHtml(miem.documento_empleado || 'No vinculado')}</div>
+                </div>
+                <div class="tool-row">
+                    <div class="tool-label">Tipo</div>
+                    <div class="tool-value">${tipoOperadorMiembro(miem.tipo_miembro)}</div>
+                </div>
+                <div class="tool-row">
+                    <div class="tool-label">Contacto</div>
+                    <div class="tool-value miembro-contact-value">${escapeHtml(contactoMiembro(miem))}</div>
+                </div>
+                <div class="tool-actions">
+                    <div class="tools-action-group" role="group" aria-label="Acciones de miembro">${acciones.join('')}</div>
+                </div>
+            </div>
+        </div>`;
 }
 
-function cardMiembroVacia() {
-    return `
-    <div class="tool-card">
-      <div class="tool-card-head">
-        <span class="tool-code">Sin registros</span>
-        <span>—</span>
-      </div>
-      <div class="tool-body">
-        <div class="tool-row" style="border-bottom:0;">
-          <div class="tool-label">Estado</div>
-          <div class="tool-value">No hay registros en el sistema</div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-
-/* =========================
-   ELIMINAR (JS)
-========================= */
 function eliminarMiembro(parametro, dir, canEdit, canDelete) {
-    let tipoBusqueda = 'eliminar';
-
     Swal.fire({
-        title: "¿Estás seguro?",
-        text: "¡Quieres realizar la acción solicitada!",
-        icon: "question",
+        title: 'Estas seguro?',
+        text: 'El miembro quedara inactivo.',
+        icon: 'question',
         showCancelButton: true,
-        confirmButtonColor: "#3085d6",
-        cancelButtonColor: "#d33",
-        confirmButtonText: "Sí, realizar",
-        cancelButtonText: "No, cancelar",
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Si, eliminar',
+        cancelButtonText: 'No, cancelar',
     }).then((result) => {
         if (!result.isConfirmed) return;
 
@@ -299,41 +307,30 @@ function eliminarMiembro(parametro, dir, canEdit, canDelete) {
             url: dir + 'app/controllers/cargarDatosBuscadorMiem.php',
             method: 'GET',
             dataType: 'json',
-            data: { id: parametro, tipoBusqueda: tipoBusqueda },
+            data: { id: parametro, tipoBusqueda: 'eliminar' },
             success: function (data) {
                 reiniciarTabla(dir, canEdit, canDelete);
 
-                if (data) {
-                    var alerta = { tipo: "simple", icono: "success", titulo: "Miembro Eliminado", texto: 'El Miembro ha sido eliminado con exito' };
-                    alertas_ajax(alerta);
+                if (data && data.ok) {
+                    alertas_ajax({
+                        tipo: 'simple',
+                        icono: 'success',
+                        titulo: 'Miembro eliminado',
+                        texto: data.texto || 'El miembro fue inactivado con exito.'
+                    });
                 } else {
-                    var alerta = { tipo: "simple", icono: "error", titulo: "Ocurrió un error inesperado", texto: 'No se pudo eliminar el Miembro, por favor intente nuevamente' };
-                    alertas_ajax(alerta);
+                    alertas_ajax({
+                        tipo: 'simple',
+                        icono: 'error',
+                        titulo: 'No se pudo eliminar',
+                        texto: (data && data.texto) ? data.texto : 'No se pudo eliminar el miembro.'
+                    });
                 }
             },
             error: function (xhr, status, error) {
                 console.error('Error al eliminar miembro:', error);
-                console.error('Respuesta (por si no era JSON válido):', xhr.responseText);
+                console.error(xhr.responseText);
             }
         });
     });
-}
-
-function tipoOperador(tipo) {
-    return (tipo === 1) ? "C.C.F." : "C.C.O.";
-}
-
-function alerta(icono, texto, segundo) {
-    let Toast = Swal.mixin({
-        toast: true,
-        position: "bottom-end",
-        showConfirmButton: false,
-        timer: segundo,
-        timerProgressBar: true,
-        didOpen: (toast) => {
-            toast.onmouseenter = Swal.stopTimer;
-            toast.onmouseleave = Swal.resumeTimer;
-        }
-    });
-    Toast.fire({ icon: icono, title: texto });
 }

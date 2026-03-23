@@ -1,9 +1,0 @@
-Modulo: herramientas
-Operacion: eliminar
-
-Sentencias SQL:
-
-- Eliminar herramienta
-UPDATE herramienta
-SET std_reg = 0
-WHERE id_ai_herramienta = :id_ai_herramienta;

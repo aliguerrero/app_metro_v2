@@ -1,0 +1,70 @@
+Modulo: ordenes_trabajo
+Operacion: listar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/otController.php -> listarOtControlador
+SELECT
+            n_ot,
+            fecha,
+            nombre_trab,
+            id_ai_estado,
+            nombre_estado,
+            color_estado AS color,
+            COALESCE(herramientas_activas, 0) AS herramientas_activas,
+            CASE
+              WHEN COALESCE(ot_finalizada, 0) = 1 OR COALESCE(bloquea_ot, 0) = 1 THEN 1
+              ELSE 0
+            END AS ot_finalizada
+        FROM vw_ot_resumen
+        WHERE std_reg = 1
+        ORDER BY n_ot ASC
+
+SQL [2] - app/controllers/otController.php -> listarOtControlador
+SELECT COUNT(1)
+        FROM vw_ot_resumen
+        WHERE std_reg = 1
+
+SQL [3] - app/controllers/otController.php -> listarDetalles
+SELECT
+        id_ai_detalle,
+        n_ot,
+        fecha_detalle AS fecha,
+        descripcion,
+        id_user_act,
+        COALESCE(NULLIF(usuario_act_nombre, ''), id_user_act) AS user
+      FROM vw_ot_detallada
+      WHERE n_ot = :n_ot
+      ORDER BY id_ai_detalle DESC
+
+SQL [4] - app/controllers/cargarDatosDetalles.php
+SELECT
+                    id_ai_detalle,
+                    n_ot,
+                    fecha_detalle AS fecha,
+                    descripcion,
+                    id_user_act,
+                    COALESCE(NULLIF(usuario_act_nombre, ''), id_user_act) AS user
+                 FROM vw_ot_detallada
+                 WHERE n_ot = :not
+                 ORDER BY fecha_detalle DESC, id_ai_detalle DESC
+
+SQL [5] - app/controllers/cargarDatosDetalles.php
+SELECT cantidad
+         FROM herramienta
+         WHERE std_reg = 1 AND id_ai_herramienta = :id
+         FOR UPDATE
+
+SQL [6] - app/controllers/cargarDatosDetalles.php
+SELECT COALESCE(SUM(cantidadot),0) AS ocupada
+         FROM herramientaot
+         WHERE id_ai_herramienta = :id
+         FOR UPDATE
+
+SQL [7] - app/controllers/cargarDatosDetalles.php
+SELECT id_ai_herramientaOT, cantidadot
+         FROM herramientaot
+         WHERE n_ot = :not AND id_ai_herramienta = :id
+         LIMIT 1
+         FOR UPDATE

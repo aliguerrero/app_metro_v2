@@ -1,0 +1,29 @@
+Modulo: areas
+Operacion: actualizar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/areaCrud.php
+SELECT {{ $ins->columnasTablaSql('area_trabajo') }} FROM area_trabajo WHERE id_ai_area = :id AND std_reg = 1 LIMIT 1
+
+SQL [2] - app/controllers/areaCrud.php
+SELECT id_ai_area, std_reg
+         FROM area_trabajo
+         WHERE nomeclatura = :no OR nombre_area = :n
+         LIMIT 1
+
+SQL [3] - app/controllers/areaCrud.php
+UPDATE area_trabajo
+                 SET std_reg = 1, nombre_area = :n, nomeclatura = :no
+                 WHERE id_ai_area = :id
+                 LIMIT 1
+
+SQL [4] - app/controllers/areaCrud.php
+UPDATE area_trabajo SET nombre_area = :n, nomeclatura = :no WHERE id_ai_area = :id
+
+SQL [5] - app/controllers/areaCrud.php
+SELECT id_ai_area, std_reg
+         FROM area_trabajo
+         WHERE id_ai_area = :id
+         LIMIT 1

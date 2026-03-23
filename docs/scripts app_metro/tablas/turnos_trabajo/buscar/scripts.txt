@@ -1,6 +1,0 @@
-Modulo: turnos_trabajo
-Operacion: buscar
-
-Sentencias SQL:
-
-SELECT id_ai_turno, nombre_turno, std_reg FROM turno_trabajo WHERE id_ai_turno = :id LIMIT 1;

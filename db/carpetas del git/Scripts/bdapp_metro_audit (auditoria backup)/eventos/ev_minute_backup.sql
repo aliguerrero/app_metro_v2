@@ -1,0 +1,13 @@
+USE `bdapp_metro_audit`;
+
+DELIMITER $$
+
+DROP EVENT IF EXISTS `ev_minute_backup`$$
+CREATE DEFINER=CURRENT_USER EVENT `ev_minute_backup`
+ON SCHEDULE EVERY 1 MINUTE
+STARTS '2026-03-19 15:34:57'
+ON COMPLETION NOT PRESERVE
+ENABLE
+DO CALL bdapp_metro_audit.sp_minute_tasks()$$
+
+DELIMITER ;

@@ -166,9 +166,69 @@ if (!function_exists('appsec_escape')) {
     }
 }
 
+if (!function_exists('appsec_system_log_path')) {
+    function appsec_system_log_path(): string
+    {
+        $base = defined('APP_ROOT') ? APP_ROOT : dirname(__DIR__, 2);
+        $logDir = $base . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'logs';
+
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0775, true);
+        }
+
+        return $logDir . DIRECTORY_SEPARATOR . 'system_errors.log';
+    }
+}
+
+if (!function_exists('appsec_log_system_error')) {
+    function appsec_log_system_error(string $nivel, string $modulo, string $mensaje, array $contexto = []): void
+    {
+        try {
+            appsec_main_model()->registrarLogSistema($nivel, $modulo, $mensaje, $contexto);
+        } catch (\Throwable $e) {
+            error_log('[appsec_log_system_error] ' . $e->getMessage());
+        }
+    }
+}
+
 ini_set('display_errors', '0');
 ini_set('html_errors', '0');
 ini_set('log_errors', '1');
+ini_set('error_log', appsec_system_log_path());
 error_reporting(E_ALL);
 
 appsec_set_security_headers();
+
+if (!defined('APPSEC_ERROR_HANDLERS_REGISTERED')) {
+    define('APPSEC_ERROR_HANDLERS_REGISTERED', true);
+
+    set_error_handler(static function (int $severity, string $message, string $file = '', int $line = 0): bool {
+        appsec_log_system_error('ERROR', 'php.error', 'Error PHP capturado.', [
+            'severity' => $severity,
+            'message' => $message,
+            'file' => $file,
+            'line' => $line,
+        ]);
+
+        return false;
+    });
+
+    register_shutdown_function(static function (): void {
+        $error = error_get_last();
+        if (!is_array($error)) {
+            return;
+        }
+
+        $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
+        if (!in_array((int)($error['type'] ?? 0), $fatalTypes, true)) {
+            return;
+        }
+
+        appsec_log_system_error('CRITICAL', 'php.shutdown', 'Error fatal en shutdown.', [
+            'type' => (int)($error['type'] ?? 0),
+            'message' => (string)($error['message'] ?? ''),
+            'file' => (string)($error['file'] ?? ''),
+            'line' => (int)($error['line'] ?? 0),
+        ]);
+    });
+}

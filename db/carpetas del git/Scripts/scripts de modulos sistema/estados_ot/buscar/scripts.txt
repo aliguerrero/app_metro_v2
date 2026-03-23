@@ -1,0 +1,35 @@
+Modulo: estados_ot
+Operacion: buscar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/estadoCrud.php
+SELECT id_ai_estado, nombre_estado, color,
+                {{ $mainModel->estadoOtLiberaHerramientasExpr() }} AS libera_herramientas,
+                {{ $mainModel->estadoOtBloqueaOtExpr() }} AS bloquea_ot,
+                std_reg
+         FROM estado_ot
+         WHERE id_ai_estado = :id
+         LIMIT 1
+
+SQL [2] - app/controllers/estadoCrud.php
+SELECT COUNT(1)
+         FROM orden_trabajo
+         WHERE id_ai_estado = :id
+           AND std_reg = 1
+
+SQL [3] - app/controllers/estadoCrud.php
+SELECT COUNT(1)
+            FROM estado_ot
+            WHERE std_reg = 1
+              AND {{ $mainModel->estadoOtBloqueaOtExpr() }} = 1
+
+Fragmento SQL [4] - app/controllers/estadoCrud.php
+AND id_ai_estado <> :id
+
+SQL [5] - app/controllers/estadoCrud.php
+SELECT id_ai_estado, std_reg
+             FROM estado_ot
+             WHERE UPPER(nombre_estado) = UPPER(:n)
+             LIMIT 1

@@ -1,0 +1,34 @@
+Modulo: ordenes_trabajo
+Operacion: eliminar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/otController.php -> eliminarOtControlador
+SELECT n_ot, nombre_trab FROM orden_trabajo WHERE n_ot = :id AND std_reg = '1' LIMIT 1
+
+SQL [2] - app/controllers/otController.php -> eliminarOtControlador
+UPDATE orden_trabajo SET std_reg = :std WHERE n_ot = :id
+
+SQL [3] - app/controllers/cargarDatosDetalle.php
+SELECT 1 FROM user_system WHERE id_empleado = :id LIMIT 1
+
+SQL [4] - app/controllers/cargarDatosDetalle.php
+SELECT COUNT(1)
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = :t
+              AND COLUMN_NAME = :c
+
+Fragmento SQL [5] - app/controllers/cargarDatosDetalle.php
+AND fecha = :fecha
+
+Fragmento SQL [6] - app/controllers/cargarDatosDetalle.php
+LIMIT 1
+
+SQL [7] - app/controllers/cargarDatosDetalle.php
+SELECT {{ implode(', ', $select) }}
+         FROM orden_trabajo
+         WHERE n_ot = :not
+           AND std_reg = 1
+         LIMIT 1

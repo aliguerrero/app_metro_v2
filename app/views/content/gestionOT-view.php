@@ -21,6 +21,7 @@
     <input type="hidden" id="perm_ot_add_detalle" value="<?php echo $can('perm_ot_add_detalle') ? '1' : '0'; ?>">
     <input type="hidden" id="perm_ot_edit" value="<?php echo $can('perm_ot_edit') ? '1' : '0'; ?>">
     <input type="hidden" id="perm_ot_delete" value="<?php echo $can('perm_ot_delete') ? '1' : '0'; ?>">
+    <input type="hidden" id="perm_ot_generar_reporte" value="<?php echo $can('perm_ot_generar_reporte') ? '1' : '0'; ?>">
 
     <input type="hidden" id="perm_herr_view" value="<?php echo $can('perm_herramienta_view') ? '1' : '0'; ?>">
     <input type="hidden" id="perm_herr_edit" value="<?php echo $can('perm_herramienta_edit') ? '1' : '0'; ?>">
@@ -156,7 +157,7 @@
         $f = $modalsDir . 'modalRegistroOt.php';
         if (file_exists($f)) include $f;
     }
-    if ($can('perm_ot_add_detalle')) {
+    if ($can('perm_ot_view') || $can('perm_ot_add_detalle')) {
         $f1 = $modalsDir . 'modalRegistroDetallesOt.php';
         $f2 = $modalsDir . 'modalRegistrodetallesOt.php';
         if (file_exists($f1)) include $f1;
@@ -169,6 +170,10 @@
     if ($can('perm_herramienta_view') || $can('perm_ot_edit')) {
         $fB = $modalsDir . 'modalHerramientaOt.php';
         if (file_exists($fB)) include $fB;
+    }
+    if ($can('perm_ot_generar_reporte')) {
+        $fC = $modalsDir . 'modalPreviewReporteOt.php';
+        if (file_exists($fC)) include $fC;
     }
 
     $scriptDetalle = __DIR__ . '/../scripts/script-detalle.php';

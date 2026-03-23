@@ -91,6 +91,14 @@ try {
             echo $insOt->eliminarOtControlador();
             exit();
 
+        case "cambiar_estado_ot":
+            echo $insOt->cambiarEstadoOtControlador();
+            exit();
+
+        case "finalizar_ot":
+            echo $insOt->finalizarOtControlador();
+            exit();
+
         default:
             jsonResponse([
                 "ok" => false,

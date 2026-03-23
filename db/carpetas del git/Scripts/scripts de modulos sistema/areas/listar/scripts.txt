@@ -1,0 +1,11 @@
+Modulo: areas
+Operacion: listar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/configController.php -> listarAreaControlador
+SELECT {{ $this->columnasTablaSql('area_trabajo') }} FROM area_trabajo WHERE std_reg='1' ORDER BY id_ai_area ASC
+
+SQL [2] - app/controllers/configController.php -> listarAreaControlador
+SELECT COUNT(id_ai_area) FROM area_trabajo where std_reg='1'

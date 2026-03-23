@@ -1,0 +1,23 @@
+Modulo: herramientas
+Operacion: listar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/herramientaController.php -> listarHerramientaControlador
+SELECT
+            id_ai_herramienta,
+            nombre_herramienta,
+            id_ai_categoria_herramienta,
+            COALESCE(nombre_categoria, 'SIN CATEGORIA') AS nombre_categoria,
+            cantidad_total AS cantidad,
+            estado,
+            std_reg,
+            cantidad_disponible,
+            cantidad_ocupada AS herramienta_ocupada
+        FROM vw_herramienta_disponibilidad
+        WHERE std_reg = 1
+        ORDER BY id_ai_herramienta ASC
+
+SQL [2] - app/controllers/herramientaController.php -> listarHerramientaControlador
+SELECT COUNT(1) FROM vw_herramienta_disponibilidad WHERE std_reg = 1

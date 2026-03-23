@@ -1,6 +1,0 @@
-Modulo: autenticacion
-Operacion: buscar
-
-Sentencias SQL :
-
-SELECT id_ai_user, id_user, user, username, password, tipo, std_reg, COALESCE(e.nombre_empleado, u.user) AS nombre_empleado, COALESCE(c.nombre_categoria, 'SIN CATEGORIA') AS nombre_categoria, id, nombre_rol, perm_usuarios_view, perm_usuarios_add, perm_usuarios_edit, perm_usuarios_delete, perm_herramienta_view, perm_herramienta_add, perm_herramienta_edit, perm_herramienta_delete, perm_miembro_view, perm_miembro_add, perm_miembro_edit, perm_miembro_delete, perm_ot_view, perm_ot_add, perm_ot_edit, perm_ot_delete, perm_ot_add_detalle, perm_ot_generar_reporte, perm_ot_add_herramienta FROM user_system u LEFT JOIN empleado e ON e.id_empleado = u.id_user LEFT JOIN categoria_empleado c ON c.id_ai_categoria_empleado = e.id_ai_categoria_empleado LEFT JOIN roles_permisos r ON r.id = u.tipo WHERE u.username = :username LIMIT 1;

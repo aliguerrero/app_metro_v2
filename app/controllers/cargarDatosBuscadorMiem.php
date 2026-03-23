@@ -15,11 +15,43 @@ function requirePerm(string $permKey): void
             "ok" => false,
             "tipo" => "simple",
             "titulo" => "Acceso denegado",
-            "texto" => "No tienes permisos para realizar esta acción",
+            "texto" => "No tienes permisos para realizar esta accion",
             "icono" => "error"
         ], JSON_UNESCAPED_UNICODE);
         exit();
     }
+}
+
+function consultaBaseMiembros(): string
+{
+    return "SELECT
+        m.id_miembro,
+        m.id_empleado,
+        m.nombre_miembro,
+        m.tipo_miembro,
+        m.std_reg,
+        e.nacionalidad,
+        e.nombre_empleado,
+        COALESCE(NULLIF(e.telefono, ''), '') AS telefono_empleado,
+        COALESCE(NULLIF(e.correo, ''), '') AS correo_empleado,
+        CASE
+            WHEN e.id_empleado IS NOT NULL AND TRIM(e.id_empleado) <> ''
+                THEN CONCAT(COALESCE(NULLIF(e.nacionalidad, ''), ''), IF(COALESCE(NULLIF(e.nacionalidad, ''), '') = '', '', '-'), e.id_empleado)
+            ELSE 'No vinculado'
+        END AS documento_empleado,
+        CASE
+            WHEN e.nombre_empleado IS NOT NULL AND TRIM(e.nombre_empleado) <> ''
+                THEN e.nombre_empleado
+            ELSE m.nombre_miembro
+        END AS nombre_visual,
+        CASE
+            WHEN e.id_empleado IS NOT NULL AND TRIM(e.id_empleado) <> '' THEN 1
+            ELSE 0
+        END AS empleado_vinculado
+    FROM miembro m
+    LEFT JOIN empleado e
+      ON e.id_empleado = m.id_empleado
+    WHERE m.std_reg = 1";
 }
 
 try {
@@ -29,7 +61,7 @@ try {
             "ok" => false,
             "tipo" => "simple",
             "titulo" => "No autenticado",
-            "texto" => "Debe iniciar sesión",
+            "texto" => "Debe iniciar sesion",
             "icono" => "error"
         ], JSON_UNESCAPED_UNICODE);
         exit();
@@ -38,59 +70,51 @@ try {
     $mainModel = new mainModel();
     $tipoBusqueda = $mainModel->limpiarCadena($_GET['tipoBusqueda'] ?? 'todo');
 
-    // =========================
-    // LISTAR / BUSCAR
-    // =========================
     if ($tipoBusqueda !== 'eliminar') {
-
         requirePerm('perm_miembro_view');
 
+        $params = [];
+        $sql = consultaBaseMiembros();
+
         if ($tipoBusqueda === 'id') {
-            $id = $mainModel->limpiarCadena($_GET['id'] ?? '');
-            $q  = '%' . $id . '%';
+            $campo = $mainModel->limpiarCadena($_GET['id'] ?? '');
+            $q = '%' . $campo . '%';
 
-            // ✅ NO repetir el mismo marcador :q (evita HY093)
-            $sql = "SELECT id_miembro, nombre_miembro, tipo_miembro
-                    FROM miembro
-                    WHERE std_reg = 1
-                      AND (id_miembro LIKE :q1 OR nombre_miembro LIKE :q2)
-                    ORDER BY id_miembro ASC";
+            $sql .= " AND (
+                m.id_miembro LIKE :q_codigo
+                OR COALESCE(e.id_empleado, '') LIKE :q_doc
+                OR COALESCE(e.nombre_empleado, m.nombre_miembro) LIKE :q_nombre
+            )";
 
-            // OJO: si tu helper NO quiere ":" en las keys, cambia a ["q1"=>$q,"q2"=>$q]
-            $stmt = $mainModel->ejecutarConsultaConParametros($sql, [":q1" => $q, ":q2" => $q]);
-        } else {
-            $sql = "SELECT id_miembro, nombre_miembro, tipo_miembro
-                    FROM miembro
-                    WHERE std_reg = 1
-                    ORDER BY id_miembro ASC";
-
-            $stmt = $mainModel->ejecutarConsultaConParametros($sql, []);
+            $params = [
+                ':q_codigo' => $q,
+                ':q_doc' => $q,
+                ':q_nombre' => $q,
+            ];
         }
 
+        $sql .= " ORDER BY nombre_visual ASC, m.id_miembro ASC";
+
+        $stmt = $mainModel->ejecutarConsultaConParametros($sql, $params);
         $rows = $stmt ? $stmt->fetchAll(\PDO::FETCH_ASSOC) : [];
 
         echo json_encode([
-            "ok"    => true,
-            "data"  => $rows,
+            "ok" => true,
+            "data" => $rows,
             "total" => count($rows)
         ], JSON_UNESCAPED_UNICODE);
         exit();
     }
 
-    // =========================
-    // ELIMINAR (SOFT DELETE)
-    // =========================
     requirePerm('perm_miembro_delete');
 
-    // ✅ preferir POST, pero aceptamos GET si viene así
     $id = $mainModel->limpiarCadena($_POST['id'] ?? ($_GET['id'] ?? ''));
-
     if ($id === '') {
         echo json_encode([
             "ok" => false,
             "tipo" => "simple",
             "titulo" => "Error",
-            "texto" => "ID inválido",
+            "texto" => "ID invalido",
             "icono" => "error"
         ], JSON_UNESCAPED_UNICODE);
         exit();
@@ -98,21 +122,20 @@ try {
 
     $mainModel->setAppUser((string)$idUser);
 
-    // verificar existencia
-    $sqlCheck = "SELECT id_miembro, std_reg
-                 FROM miembro
-                 WHERE id_miembro = :id
-                 LIMIT 1";
-
-    // OJO: si tu helper NO quiere ":" en keys, usa ["id"=>$id]
-    $check = $mainModel->ejecutarConsultaConParametros($sqlCheck, [":id" => $id]);
+    $check = $mainModel->ejecutarConsultaConParametros(
+        "SELECT id_miembro, std_reg
+         FROM miembro
+         WHERE id_miembro = :id
+         LIMIT 1",
+        [':id' => $id]
+    );
 
     if (!$check || $check->rowCount() === 0) {
         echo json_encode([
             "ok" => false,
             "tipo" => "simple",
             "titulo" => "No encontrado",
-            "texto" => "No hemos encontrado el miembro en el sistema",
+            "texto" => "No encontramos el miembro solicitado",
             "icono" => "error"
         ], JSON_UNESCAPED_UNICODE);
         exit();
@@ -124,25 +147,24 @@ try {
             "ok" => true,
             "tipo" => "simple",
             "titulo" => "Sin cambios",
-            "texto" => "El miembro ya está inactivo",
+            "texto" => "El miembro ya estaba inactivo",
             "icono" => "info"
         ], JSON_UNESCAPED_UNICODE);
         exit();
     }
 
-    // ✅ UPDATE directo (evita problemas internos de ejecutarSqlUpdate)
-    $sqlUpd = "UPDATE miembro
-               SET std_reg = 0
-               WHERE id_miembro = :id";
+    $upd = $mainModel->ejecutarConsultaConParametros(
+        "UPDATE miembro SET std_reg = 0 WHERE id_miembro = :id",
+        [':id' => $id]
+    );
 
-    $updStmt = $mainModel->ejecutarConsultaConParametros($sqlUpd, [":id" => $id]);
-    $ok = (bool)$updStmt && $updStmt->rowCount() > 0;
+    $ok = (bool)$upd && $upd->rowCount() > 0;
 
     echo json_encode([
         "ok" => $ok,
         "tipo" => $ok ? "recargar" : "simple",
-        "titulo" => $ok ? "Miembro Eliminado" : "Error",
-        "texto" => $ok ? "El miembro fue inactivado (baja lógica) con éxito" : "No se pudo eliminar el miembro",
+        "titulo" => $ok ? "Miembro eliminado" : "Error",
+        "texto" => $ok ? "El miembro fue inactivado correctamente" : "No se pudo eliminar el miembro",
         "icono" => $ok ? "success" : "error"
     ], JSON_UNESCAPED_UNICODE);
     exit();
@@ -151,7 +173,7 @@ try {
         "ok" => false,
         "tipo" => "simple",
         "titulo" => "Error interno",
-        "texto" => "Ocurrió un error inesperado",
+        "texto" => "Ocurrio un error inesperado",
         "detail" => $e->getMessage(),
         "icono" => "error"
     ], JSON_UNESCAPED_UNICODE);

@@ -1,6 +1,0 @@
-Modulo: empleados
-Operacion: buscar
-
-Sentencias SQL:
-
-SELECT id_ai_empleado, id_empleado, nacionalidad, nombre_empleado, telefono, direccion, correo, id_ai_categoria_empleado, std_reg FROM empleado WHERE id_empleado = :id_empleado LIMIT 1; SELECT COUNT(1) FROM empleado WHERE id_empleado = :id_empleado;

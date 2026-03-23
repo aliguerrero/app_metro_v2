@@ -158,28 +158,29 @@ function cssBase(string $papel, string $orientacion): string
 {
     $papel = strtoupper($papel ?: 'A4');
     $orientacion = ($orientacion === 'landscape') ? 'landscape' : 'portrait';
-
     return "
     <style>
-      @page { size: {$papel} {$orientacion}; margin: 18px; }
-      body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 12px; color:#111; }
-      .wrap { padding: 10px 0; }
+      @page { size: {$papel} {$orientacion}; margin: 24px 26px; }
+      html, body { margin:0; padding:0; }
+      body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 11px; line-height:1.45; color:#111; }
+      body.report-ot-detallado { font-size:10.5px; }
+      .sheet { padding: 10px 14px 8px 10px; }
+      .wrap { padding: 12px 0; }
       .muted { color:#666; }
-      .header { display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid #ddd; padding-bottom:10px; margin-bottom:14px; }
+      .header { display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid #ddd; padding-bottom:12px; margin-bottom:18px; }
       .brand { display:flex; align-items:center; gap:12px; }
       .brand img { width: 56px; height: 56px; object-fit: contain; }
       .title { font-size: 16px; font-weight: 700; margin:0; }
       .sub { margin:2px 0 0 0; font-size: 12px; }
-      table { width:100%; border-collapse:collapse; margin-top:10px; }
-      th, td { border:1px solid #ddd; padding:7px; vertical-align:top; }
-      th { background:#f3f5f7; text-align:left; }
-      .badge { display:inline-block; padding:3px 8px; border-radius:999px; background:#eee; font-size:11px; }
-      .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
-      .card { border:1px solid #ddd; border-radius:8px; padding:10px; }
-      .h6 { font-size: 13px; font-weight: 700; margin:0 0 6px 0; }
+      table { width:100%; border-collapse:collapse; margin-top:12px; table-layout:fixed; }
+      th, td { border:1px solid #ddd; padding:7px 8px; vertical-align:top; word-wrap:break-word; }
+      body.report-ot-detallado th, body.report-ot-detallado td { padding:5px; }
+      th { background:#f3f5f7; text-align:left; } .badge { display:inline-block; padding:3px 8px; border-radius:999px; background:#eee; font-size:11px; }
+      .grid2 { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:10px; } .card { border:1px solid #ddd; border-radius:8px; padding:10px; } .h6 { font-size: 13px; font-weight: 700; margin:0 0 6px 0; } body.report-ot-detallado .h6 { font-size:12px; }
     </style>
     ";
 }
+
 
 function headerHtmlPdf(array $empresa, string $titulo, bool $membrete, bool $logo): string
 {
@@ -251,7 +252,7 @@ function renderTable(string $titulo, array $cols, array $rows): string
     ";
 }
 
-function buildWhereOT(array $f, array &$params, string $otAreaCol, string $otSitioCol, string $detalleEstadoCol): string
+function buildWhereOT(array $f, array &$params, string $otAreaCol, string $otSitioCol, string $otEstadoCol): string
 {
     $w = " WHERE ot.std_reg = 1 ";
 
@@ -277,11 +278,11 @@ function buildWhereOT(array $f, array &$params, string $otAreaCol, string $otSit
     }
 
     if (!empty($f['estado'])) {
-        $w .= " AND EXISTS (SELECT 1 FROM detalle_orden d WHERE d.n_ot = ot.n_ot AND d.{$detalleEstadoCol} = :estado) ";
+        $w .= " AND ot.{$otEstadoCol} = :estado ";
         $params[':estado'] = $f['estado'];
     }
     if (!empty($f['usuario'])) {
-        $w .= " AND EXISTS (SELECT 1 FROM detalle_orden d2 WHERE d2.n_ot = ot.n_ot AND d2.id_user_act = :usuario) ";
+        $w .= " AND EXISTS (SELECT 1 FROM vw_ot_detallada d2 WHERE d2.n_ot = ot.n_ot AND d2.id_user_act = :usuario) ";
         $params[':usuario'] = $f['usuario'];
     }
     return $w;
@@ -292,7 +293,7 @@ function buildWhereOT(array $f, array &$params, string $otAreaCol, string $otSit
 // =======================
 $tipo = $mm->limpiarCadena($_GET['tipo'] ?? '');
 $papel = $mm->limpiarCadena($_GET['papel'] ?? 'A4');
-$orientacion = $mm->limpiarCadena($_GET['orientacion'] ?? 'portrait');
+$orientacionParam = $mm->limpiarCadena($_GET['orientacion'] ?? ''); $orientacion = $orientacionParam !== '' ? $orientacionParam : (($tipo === 'ot_detallado') ? 'landscape' : 'portrait');
 $membrete = (int)($mm->limpiarCadena($_GET['membrete'] ?? '1')) === 1;
 $logo = (int)($mm->limpiarCadena($_GET['logo'] ?? '1')) === 1;
 
@@ -310,7 +311,7 @@ $f = [
     $areaCol = pickColumn($mm, 'area_trabajo', ['id_ai_area', 'id_area'], 'id_ai_area');
     $sitioCol = pickColumn($mm, 'sitio_trabajo', ['id_ai_sitio', 'id_sitio'], 'id_ai_sitio');
     $estadoCol = pickColumn($mm, 'estado_ot', ['id_ai_estado', 'id_estado'], 'id_ai_estado');
-    $detalleEstadoCol = pickColumn($mm, 'detalle_orden', ['id_ai_estado', 'id_estado'], $estadoCol);
+    $otEstadoCol = pickColumn($mm, 'orden_trabajo', ['id_ai_estado', 'id_estado'], $estadoCol);
     $turnoCol = pickColumn($mm, 'turno_trabajo', ['id_ai_turno', 'id_turno'], 'id_ai_turno');
     $detalleTurnoCol = pickColumn($mm, 'detalle_orden', ['id_ai_turno', 'id_turno'], $turnoCol);
     $detalleIdCol = pickColumn($mm, 'detalle_orden', ['id_ai_detalle', 'id'], 'id_ai_detalle');
@@ -345,8 +346,8 @@ if ($tipo === 'miembros' && !hasPerm('perm_miembro_view')) {
 }
 
 $empresa = getEmpresa($mm);
-
-$html = "<html><head><meta charset='UTF-8'>" . cssBase($papel, $orientacion) . "</head><body>";
+$bodyClass = 'report-' . preg_replace('/[^a-z0-9_-]+/i', '-', $tipo);
+$html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">' . cssBase($papel, $orientacion) . '</head><body class="' . $bodyClass . '"><div class="sheet">';
 
 try {
 
@@ -354,24 +355,17 @@ try {
         $reportTitle = "Reporte OT (Resumen)";
 
         $params = [];
-        $where = buildWhereOT($f, $params, $otAreaCol, $otSitioCol, $detalleEstadoCol);
+        $where = buildWhereOT($f, $params, 'id_ai_area', 'id_ai_sitio', 'id_ai_estado');
 
         $st = q($mm, "
           SELECT
             ot.n_ot, ot.fecha, ot.semana, ot.mes, ot.nombre_trab,
-            a.nombre_area,
-            s.nombre_sitio,
-            (SELECT e.nombre_estado
-             FROM detalle_orden d
-             LEFT JOIN estado_ot e ON e.{$estadoCol} = d.{$detalleEstadoCol}
-             WHERE d.n_ot = ot.n_ot
-             ORDER BY d.{$detalleIdCol} DESC
-             LIMIT 1) AS estado_actual,
-            (SELECT COUNT(1) FROM detalle_orden d2 WHERE d2.n_ot = ot.n_ot) AS total_detalles,
-            (SELECT COUNT(1) FROM herramientaot h WHERE h.n_ot = ot.n_ot) AS total_herr
-          FROM orden_trabajo ot
-          LEFT JOIN area_trabajo a ON a.{$areaCol} = ot.{$otAreaCol}
-          LEFT JOIN sitio_trabajo s ON s.{$sitioCol} = ot.{$otSitioCol}
+            ot.nombre_area,
+            ot.nombre_sitio,
+            ot.nombre_estado AS estado_actual,
+            ot.total_detalles,
+            ot.herramientas_asignadas AS total_herr
+          FROM vw_ot_resumen ot
           {$where}
           ORDER BY ot.fecha DESC, ot.n_ot DESC
           LIMIT 2000
@@ -409,11 +403,9 @@ try {
 
         if (!empty($f['n_ot'])) {
             $ot = q($mm, "
-              SELECT {$mm->columnasTablaSql('orden_trabajo', 'ot')}, a.nombre_area, s.nombre_sitio
-              FROM orden_trabajo ot
-          LEFT JOIN area_trabajo a ON a.{$areaCol} = ot.{$otAreaCol}
-          LEFT JOIN sitio_trabajo s ON s.{$sitioCol} = ot.{$otSitioCol}
-              WHERE ot.n_ot = :id AND ot.std_reg = 1
+              SELECT *
+              FROM vw_ot_resumen
+              WHERE n_ot = :id AND std_reg = 1
               LIMIT 1
             ", [':id' => $f['n_ot']]);
 
@@ -432,6 +424,7 @@ try {
                         <div><b>Area:</b> " . htmlspecialchars($ot['nombre_area'] ?? '') . "</div>
                         <div><b>Sitio:</b> " . htmlspecialchars($ot['nombre_sitio'] ?? '') . "</div>
                         <div><b>Trabajo:</b> " . htmlspecialchars($ot['nombre_trab'] ?? '') . "</div>
+                        <div><b>Estado:</b> " . htmlspecialchars($ot['nombre_estado'] ?? 'SIN ESTADO') . "</div>
                         <div><b>Semana/Mes:</b> " . htmlspecialchars((string)$ot['semana']) . " / " . htmlspecialchars((string)$ot['mes']) . "</div>
                       </div>
                       <div class='card'>
@@ -443,45 +436,45 @@ try {
                 ";
 
                 $det = q($mm, "
-                  SELECT {$mm->columnasTablaSql('detalle_orden', 'd')}, 
-                         t.nombre_turno,
-                         e.nombre_estado,
-                         COALESCE(emp.nombre_empleado, d.id_user_act) AS tecnico_nombre,
-                         cco.nombre_miembro AS cco_nombre,
-                         ccf.nombre_miembro AS ccf_nombre
-                  FROM detalle_orden d
-                  LEFT JOIN turno_trabajo t ON t.{$turnoCol} = d.{$detalleTurnoCol}
-                  LEFT JOIN estado_ot e ON e.{$estadoCol} = d.{$detalleEstadoCol}
-                  LEFT JOIN empleado emp ON emp.id_empleado = d.id_user_act
-                  LEFT JOIN miembro cco ON cco.id_miembro = d.id_miembro_cco
-                  LEFT JOIN miembro ccf ON ccf.id_miembro = d.id_miembro_ccf
-                  WHERE d.n_ot = :id
-                  ORDER BY d.{$detalleIdCol} ASC
+                  SELECT
+                    id_ai_detalle,
+                    fecha_detalle AS fecha,
+                    nombre_turno,
+                    COALESCE(NULLIF(usuario_act_nombre, ''), id_user_act) AS tecnico_nombre,
+                    miembro_cco_nombre AS cco_nombre,
+                    miembro_ccf_nombre AS ccf_nombre,
+                    descripcion,
+                    hora_inicio,
+                    hora_fin,
+                    observacion
+                  FROM vw_ot_detallada
+                  WHERE n_ot = :id
+                  ORDER BY id_ai_detalle ASC
                 ", [':id' => $f['n_ot']]);
 
                 $detRows = $det ? $det->fetchAll(PDO::FETCH_ASSOC) : [];
 
                 $tableRows = [];
                 foreach ($detRows as $r) {
+                    $horaInicio = $mm->detalleHoraInicioValor($r);
+                    $horaFin = $mm->detalleHoraFinValor($r);
                     $tableRows[] = [
-                        htmlspecialchars((string)($r[$detalleIdCol] ?? '')),
+                        htmlspecialchars((string)($r['id_ai_detalle'] ?? '')),
                         htmlspecialchars(date('d/m/Y', strtotime($r['fecha']))),
                         htmlspecialchars($r['nombre_turno'] ?? ''),
                         htmlspecialchars($r['tecnico_nombre'] ?? ''),
                         htmlspecialchars($r['cco_nombre'] ?? ''),
                         htmlspecialchars($r['ccf_nombre'] ?? ''),
-                        htmlspecialchars($r['nombre_estado'] ?? ''),
                         htmlspecialchars($r['descripcion'] ?? ''),
-                        htmlspecialchars($r['hora_ini_pre'] ?? '') . " - " . htmlspecialchars($r['hora_fin_pre'] ?? ''),
-                        htmlspecialchars($r['hora_ini_tra'] ?? '') . " - " . htmlspecialchars($r['hora_fin_tra'] ?? ''),
-                        htmlspecialchars($r['hora_ini_eje'] ?? '') . " - " . htmlspecialchars($r['hora_fin_eje'] ?? ''),
+                        htmlspecialchars($horaInicio),
+                        htmlspecialchars($horaFin),
                         htmlspecialchars($r['observacion'] ?? ''),
                     ];
                 }
 
                 $html .= renderTable(
                     "Detalles de la OT",
-                    ['ID', 'Fecha', 'Turno', 'Tecnico', 'CCO', 'CCF', 'Estado', 'Descripcion', 'Prep', 'Tras', 'Ejec', 'Observacion'],
+                    ['ID', 'Fecha', 'Turno', 'Tecnico', 'CCO', 'CCF', 'Descripcion', 'Hora inicio', 'Hora fin', 'Observacion'],
                     $tableRows
                 );
 
@@ -521,11 +514,12 @@ try {
         $params = [];
         $where = " WHERE std_reg = 1 ";
         if ($qtxt !== '') {
-            $where .= " AND ({$herramientaCol} LIKE :q OR nombre_herramienta LIKE :q) ";
-            $params[':q'] = "%{$qtxt}%";
+            $where .= " AND (CAST(id_ai_herramienta AS CHAR) LIKE :q_codigo OR nombre_herramienta LIKE :q_nombre) ";
+            $params[':q_codigo'] = "%{$qtxt}%";
+            $params[':q_nombre'] = "%{$qtxt}%";
         }
 
-        $st = q($mm, "SELECT {$herramientaCol} AS herramienta_id, nombre_herramienta, cantidad, estado FROM herramienta {$where} ORDER BY nombre_herramienta ASC LIMIT 5000", $params);
+        $st = q($mm, "SELECT id_ai_herramienta AS herramienta_id, nombre_herramienta, cantidad_total AS cantidad, cantidad_disponible, cantidad_ocupada, estado FROM vw_herramienta_disponibilidad {$where} ORDER BY nombre_herramienta ASC LIMIT 5000", $params);
         $rows = $st ? $st->fetchAll(PDO::FETCH_ASSOC) : [];
 
         $html .= headerHtmlPdf($empresa, $reportTitle, $membrete, $logo);
@@ -536,11 +530,13 @@ try {
                 htmlspecialchars($r['herramienta_id']),
                 htmlspecialchars($r['nombre_herramienta']),
                 htmlspecialchars((string)$r['cantidad']),
+                htmlspecialchars((string)$r['cantidad_disponible']),
+                htmlspecialchars((string)$r['cantidad_ocupada']),
                 htmlspecialchars((string)$r['estado']),
             ];
         }
 
-        $html .= renderTable("Listado de herramientas", ['Codigo', 'Nombre', 'Cantidad', 'Estado'], $tableRows);
+        $html .= renderTable("Listado de herramientas", ['Codigo', 'Nombre', 'Total', 'Disponible', 'Ocupada', 'Estado'], $tableRows);
         $filename = "reporte_herramientas_" . date('Ymd_His') . ".pdf";
     } elseif ($tipo === 'miembros') {
         $reportTitle = "Reporte de Miembros";
@@ -571,19 +567,25 @@ try {
 
         $qtxt = trim($f['q']);
         $params = [];
-        $where = " WHERE u.std_reg = 1 ";
+        $where = " WHERE std_reg = 1 ";
         if ($qtxt !== '') {
-            $where .= " AND (u.id_empleado LIKE :q OR COALESCE(e.nombre_empleado, '') LIKE :q OR u.username LIKE :q) ";
-            $params[':q'] = "%{$qtxt}%";
+            $where .= " AND (
+                id_empleado LIKE :q_id
+                OR COALESCE(nombre_empleado, '') LIKE :q_nombre
+                OR username LIKE :q_username
+                OR COALESCE(nombre_rol, '') LIKE :q_rol
+            ) ";
+            $params[':q_id'] = "%{$qtxt}%";
+            $params[':q_nombre'] = "%{$qtxt}%";
+            $params[':q_username'] = "%{$qtxt}%";
+            $params[':q_rol'] = "%{$qtxt}%";
         }
 
         $st = q($mm, "
-          SELECT u.id_empleado AS id_user, COALESCE(e.nombre_empleado, u.id_empleado) AS user, u.username, r.nombre_rol
-          FROM user_system u
-          LEFT JOIN empleado e ON e.id_empleado = u.id_empleado
-          LEFT JOIN roles_permisos r ON r.id = u.tipo
+          SELECT id_empleado AS id_user, COALESCE(nombre_empleado, id_empleado) AS user, username, nombre_rol
+          FROM vw_usuario_empleado
           {$where}
-          ORDER BY COALESCE(e.nombre_empleado, u.id_empleado) ASC
+          ORDER BY COALESCE(nombre_empleado, id_empleado) ASC
           LIMIT 5000
         ", $params);
 
@@ -603,13 +605,13 @@ try {
         exit("Tipo de reporte no soportado");
     }
 
-    $html .= "</body></html>";
+    $html .= "</div></body></html>";
 
     // DOMPDF
     $options = new Options();
-    $options->set('isRemoteEnabled', true); // por si luego usas imagenes remotas
+    $options->set('isRemoteEnabled', true);
     $options->set('isHtml5ParserEnabled', true);
-
+    $options->setDefaultFont('DejaVu Sans');
     $dompdf = new Dompdf($options);
     $dompdf->loadHtml($html, 'UTF-8');
     $dompdf->setPaper(strtoupper($papel ?: 'A4'), ($orientacion === 'landscape') ? 'landscape' : 'portrait');

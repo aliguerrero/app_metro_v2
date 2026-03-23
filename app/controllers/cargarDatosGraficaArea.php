@@ -7,28 +7,26 @@ $mainModel = appsec_main_model();
 $id = appsec_clean_string(appsec_request_string('id'));
 
 if (!appsec_is_digits($id)) {
-    appsec_fail('ID de turno invalido.', 400, ['error' => 'id_invalido']);
+    appsec_fail('ID de area invalido.', 400, ['error' => 'id_invalido']);
 }
 
 $stmt = $mainModel->ejecutarConsultaConParametros(
-    "SELECT e.nombre_estado,
-            COUNT(dord.id_ai_estado) AS total_ordenes,
+    "SELECT nombre_estado,
+            COUNT(1) AS total_ordenes,
             ROUND(
-                COUNT(dord.id_ai_estado) * 100.0 /
-                NULLIF((SELECT COUNT(1) FROM detalle_orden WHERE id_ai_turno = :turno_total), 0),
+                COUNT(1) * 100.0 /
+                NULLIF((SELECT COUNT(1) FROM vw_ot_resumen WHERE id_ai_area = :area_total AND std_reg = 1), 0),
                 2
             ) AS porcentaje_total
-     FROM detalle_orden dord
-     JOIN turno_trabajo tu ON dord.id_ai_turno = tu.id_ai_turno
-     JOIN estado_ot e ON dord.id_ai_estado = e.id_ai_estado
-     WHERE dord.id_ai_turno = :turno
-     GROUP BY dord.id_ai_estado, e.nombre_estado",
+     FROM vw_ot_resumen
+     WHERE id_ai_area = :area
+       AND std_reg = 1
+     GROUP BY id_ai_estado, nombre_estado",
     [
-        ':turno_total' => (int)$id,
-        ':turno' => (int)$id,
+        ':area_total' => (int)$id,
+        ':area' => (int)$id,
     ]
 );
 
 $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
 appsec_json_response($rows);
-

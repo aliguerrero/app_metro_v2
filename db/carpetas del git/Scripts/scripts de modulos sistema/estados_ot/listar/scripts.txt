@@ -1,0 +1,16 @@
+Modulo: estados_ot
+Operacion: listar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/configController.php -> listarEstadoControlador
+SELECT {{ $this->columnasTablaSql('estado_ot') }},
+                {{ $this->estadoOtLiberaHerramientasExpr() }} AS libera_herramientas_estado,
+                {{ $this->estadoOtBloqueaOtExpr() }} AS bloquea_ot_estado
+            FROM estado_ot
+            WHERE std_reg='1'
+            ORDER BY id_ai_estado ASC
+
+SQL [2] - app/controllers/configController.php -> listarEstadoControlador
+SELECT COUNT(id_ai_estado) FROM estado_ot where std_reg='1'

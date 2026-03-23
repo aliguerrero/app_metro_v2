@@ -1,0 +1,23 @@
+Modulo: sitios_trabajo
+Operacion: listar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/sitioCrud.php
+SELECT COUNT(id_ai_sitio) FROM sitio_trabajo where std_reg = 1
+
+SQL [2] - app/controllers/sitioCrud.php
+SELECT {{ $ins->columnasTablaSql('sitio_trabajo') }} FROM sitio_trabajo WHERE id_ai_sitio = :id AND std_reg = 1 LIMIT 1
+
+SQL [3] - app/controllers/sitioCrud.php
+SELECT id_ai_sitio, std_reg
+         FROM sitio_trabajo
+         WHERE nombre_sitio = :n
+         LIMIT 1
+
+SQL [4] - app/controllers/sitioCrud.php
+SELECT id_ai_sitio, std_reg
+         FROM sitio_trabajo
+         WHERE id_ai_sitio = :id
+         LIMIT 1

@@ -1,6 +1,0 @@
-Modulo: estados_ot
-Operacion: eliminar
-
-Sentencias SQL:
-
-UPDATE estado_ot SET std_reg = 0 WHERE id_ai_estado = :id_ai_estado;

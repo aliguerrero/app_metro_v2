@@ -1,6 +1,0 @@
-Modulo: categorias_empleado
-Operacion: crear
-
-Sentencias SQL:
-
-INSERT INTO categoria_empleado (nombre_categoria, descripcion, std_reg) VALUES (:nombre_categoria, :descripcion, 1);

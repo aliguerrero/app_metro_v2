@@ -131,23 +131,9 @@ class reporteGeneradoController extends mainModel
         }
 
         $idUser = (string)($_SESSION['id_user'] ?? ($_SESSION['id'] ?? ''));
-        $nombreUser = (string)($_SESSION['user'] ?? '');
-        $username = (string)($_SESSION['username'] ?? '');
 
-        $stmt = $this->ejecutarConsultaConParametros(
-            "INSERT INTO reporte_generado (
-                tipo_reporte,
-                titulo_reporte,
-                nombre_archivo,
-                ruta_archivo,
-                mime_type,
-                tamano_bytes,
-                parametros_json,
-                id_user_generador,
-                nombre_user_generador,
-                username_generador,
-                std_reg
-            ) VALUES (
+        $row = $this->ejecutarProcedimientoFila(
+            "CALL sp_reporte_registrar_generado(
                 :tipo_reporte,
                 :titulo_reporte,
                 :nombre_archivo,
@@ -155,10 +141,7 @@ class reporteGeneradoController extends mainModel
                 :mime_type,
                 :tamano_bytes,
                 :parametros_json,
-                :id_user_generador,
-                :nombre_user_generador,
-                :username_generador,
-                1
+                :id_user_generador
             )",
             [
                 ':tipo_reporte' => $tipoReporte,
@@ -169,12 +152,10 @@ class reporteGeneradoController extends mainModel
                 ':tamano_bytes' => strlen($pdfBinary),
                 ':parametros_json' => json_encode($parametros, JSON_UNESCAPED_UNICODE),
                 ':id_user_generador' => $idUser,
-                ':nombre_user_generador' => $nombreUser,
-                ':username_generador' => $username,
             ]
         );
 
-        if (!$stmt) {
+        if (!$row) {
             @unlink($fullPath);
             throw new RuntimeException('No se pudo registrar el reporte generado en la base de datos.');
         }
@@ -212,8 +193,7 @@ class reporteGeneradoController extends mainModel
                 username_generador,
                 created_at,
                 std_reg
-             FROM reporte_generado
-             WHERE std_reg = 1
+             FROM vw_reportes_generados
              ORDER BY created_at DESC, id_ai_reporte_generado DESC
              LIMIT 200"
         );
@@ -384,10 +364,9 @@ class reporteGeneradoController extends mainModel
                 nombre_user_generador,
                 username_generador,
                 created_at,
-                std_reg
-             FROM reporte_generado
+                 std_reg
+             FROM vw_reportes_generados
              WHERE id_ai_reporte_generado = :id
-               AND std_reg = 1
              LIMIT 1",
             [':id' => $idReporte]
         );

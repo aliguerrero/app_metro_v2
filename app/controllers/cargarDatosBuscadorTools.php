@@ -28,35 +28,23 @@ if ($tipoBusqueda !== 'eliminar') {
 
         $consulta = "
             SELECT
-                h.id_ai_herramienta,
-                h.nombre_herramienta,
-                h.id_ai_categoria_herramienta,
-                COALESCE(ch.nombre_categoria, 'SIN CATEGORIA') AS nombre_categoria,
-                h.cantidad,
-                h.estado,
-                h.std_reg,
-                (h.cantidad - COALESCE(SUM(hot.cantidadot), 0)) AS cantidad_disponible,
-                COALESCE(SUM(hot.cantidadot), 0) AS herramienta_ocupada
-            FROM herramienta h
-            LEFT JOIN categoria_herramienta ch
-              ON ch.id_ai_categoria_herramienta = h.id_ai_categoria_herramienta
-            LEFT JOIN herramientaot hot
-              ON h.id_ai_herramienta = hot.id_ai_herramienta
-            WHERE h.std_reg = 1
+                id_ai_herramienta,
+                nombre_herramienta,
+                id_ai_categoria_herramienta,
+                COALESCE(nombre_categoria, 'SIN CATEGORIA') AS nombre_categoria,
+                cantidad_total AS cantidad,
+                estado,
+                std_reg,
+                cantidad_disponible,
+                cantidad_ocupada AS herramienta_ocupada
+            FROM vw_herramienta_disponibilidad
+            WHERE std_reg = 1
               AND (
-                    CAST(h.id_ai_herramienta AS CHAR) LIKE :term1
-                    OR h.nombre_herramienta LIKE :term2
-                    OR COALESCE(ch.nombre_categoria, '') LIKE :term3
+                    CAST(id_ai_herramienta AS CHAR) LIKE :term1
+                    OR nombre_herramienta LIKE :term2
+                    OR COALESCE(nombre_categoria, '') LIKE :term3
               )
-            GROUP BY
-                h.id_ai_herramienta,
-                h.nombre_herramienta,
-                h.id_ai_categoria_herramienta,
-                ch.nombre_categoria,
-                h.cantidad,
-                h.estado,
-                h.std_reg
-            ORDER BY h.id_ai_herramienta ASC
+            ORDER BY id_ai_herramienta ASC
         ";
 
         $stmt = $mainModel->ejecutarConsultaConParametros($consulta, [
@@ -68,30 +56,18 @@ if ($tipoBusqueda !== 'eliminar') {
 
         $consulta = "
             SELECT
-                h.id_ai_herramienta,
-                h.nombre_herramienta,
-                h.id_ai_categoria_herramienta,
-                COALESCE(ch.nombre_categoria, 'SIN CATEGORIA') AS nombre_categoria,
-                h.cantidad,
-                h.estado,
-                h.std_reg,
-                (h.cantidad - COALESCE(SUM(hot.cantidadot), 0)) AS cantidad_disponible,
-                COALESCE(SUM(hot.cantidadot), 0) AS herramienta_ocupada
-            FROM herramienta h
-            LEFT JOIN categoria_herramienta ch
-              ON ch.id_ai_categoria_herramienta = h.id_ai_categoria_herramienta
-            LEFT JOIN herramientaot hot
-              ON h.id_ai_herramienta = hot.id_ai_herramienta
-            WHERE h.std_reg = 1
-            GROUP BY
-                h.id_ai_herramienta,
-                h.nombre_herramienta,
-                h.id_ai_categoria_herramienta,
-                ch.nombre_categoria,
-                h.cantidad,
-                h.estado,
-                h.std_reg
-            ORDER BY h.id_ai_herramienta ASC
+                id_ai_herramienta,
+                nombre_herramienta,
+                id_ai_categoria_herramienta,
+                COALESCE(nombre_categoria, 'SIN CATEGORIA') AS nombre_categoria,
+                cantidad_total AS cantidad,
+                estado,
+                std_reg,
+                cantidad_disponible,
+                cantidad_ocupada AS herramienta_ocupada
+            FROM vw_herramienta_disponibilidad
+            WHERE std_reg = 1
+            ORDER BY id_ai_herramienta ASC
         ";
 
         $stmt = $mainModel->ejecutarConsultaConParametros($consulta, []);

@@ -1,6 +1,0 @@
-Modulo: categorias_empleado
-Operacion: actualizar
-
-Sentencias SQL:
-
-UPDATE categoria_empleado SET nombre_categoria = :nombre_categoria, descripcion = :descripcion WHERE id_ai_categoria_empleado = :id_ai_categoria_empleado;

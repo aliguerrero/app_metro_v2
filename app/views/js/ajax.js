@@ -226,12 +226,8 @@ function limpiarDetalles() {
     const inputCcf = pick(modal, '#ccf', '[name="ccf"]');
     const inputTecnico = pick(modal, '#tec', '[name="tec"]');
 
-    const inputPrep_ini = pick(modal, '#prep_ini', '[name="prep_ini"]');
-    const inputPrep_fin = pick(modal, '#prep_fin', '[name="prep_fin"]');
-    const inputTras_ini = pick(modal, '#tras_ini', '[name="tras_ini"]');
-    const inputTras_fin = pick(modal, '#tras_fin', '[name="tras_fin"]');
-    const inputEjec_ini = pick(modal, '#ejec_ini', '[name="ejec_ini"]');
-    const inputEjec_fin = pick(modal, '#ejec_fin', '[name="ejec_fin"]');
+    const inputHoraInicio = pick(modal, '#hora_inicio', '[name="hora_inicio"]');
+    const inputHoraFin = pick(modal, '#hora_fin', '[name="hora_fin"]');
     const inputObserv = pick(modal, '#observacion', '[name="observacion"]');
 
     // reset seguro
@@ -249,12 +245,8 @@ function limpiarDetalles() {
     setVal(inputCcf, '');
     setVal(inputTecnico, '');
 
-    setVal(inputPrep_ini, '');
-    setVal(inputPrep_fin, '');
-    setVal(inputTras_ini, '');
-    setVal(inputTras_fin, '');
-    setVal(inputEjec_ini, '');
-    setVal(inputEjec_fin, '');
+    setVal(inputHoraInicio, '');
+    setVal(inputHoraFin, '');
     setVal(inputObserv, '');
 
     const modo = document.getElementById('modoEdicionLabel');

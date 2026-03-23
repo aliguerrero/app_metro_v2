@@ -1,0 +1,53 @@
+Modulo: logs_auditoria
+Operacion: buscar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/logDetail.php
+SELECT COUNT(1) AS c
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = :t
+              AND COLUMN_NAME = 'std_reg'
+
+SQL [2] - app/controllers/logDetail.php
+SELECT {{ $ins->columnasTablaSql('log_user') }} FROM log_user WHERE id_log = :id LIMIT 1
+
+SQL [3] - app/controllers/logRestore.php
+SELECT COUNT(1) AS c
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = :t
+              AND COLUMN_NAME = :c
+
+SQL [4] - app/controllers/logRestore.php
+SELECT COLUMN_NAME
+            FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = :t
+              AND CONSTRAINT_NAME = 'PRIMARY'
+            ORDER BY ORDINAL_POSITION ASC
+
+SQL [5] - app/controllers/logRestore.php
+SELECT {{ $ins->columnasTablaSql($table) }}{{ " FROM `$table` WHERE `$pkCol` = :v LIMIT 1" }}
+
+SQL [6] - app/controllers/logRestore.php
+SELECT COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
+              FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+              WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = :t
+                AND REFERENCED_TABLE_NAME IS NOT NULL
+
+SQL [7] - app/controllers/logRestore.php
+SELECT TABLE_NAME, COLUMN_NAME, REFERENCED_COLUMN_NAME
+                FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND REFERENCED_TABLE_NAME = :t
+                  AND REFERENCED_COLUMN_NAME = :pc
+
+SQL [8] - app/controllers/logRestore.php
+SELECT {{ $ins->columnasTablaSql('log_user') }} FROM log_user WHERE id_log = :id LIMIT 1
+
+SQL [9] - app/controllers/logUserAjax.php
+SELECT DATABASE()

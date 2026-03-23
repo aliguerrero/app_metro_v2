@@ -726,6 +726,11 @@ class configController extends mainModel
         // Permisos para Usuarios
         $nombre_estado = $this->limpiarCadena($_POST['nombre_estado']);
         $color = $this->limpiarCadena($_POST['color']);
+        $liberaHerramientas = isset($_POST['libera_herramientas']) && (string)$_POST['libera_herramientas'] === '1' ? 1 : 0;
+        $bloqueaOt = isset($_POST['bloquea_ot']) && (string)$_POST['bloquea_ot'] === '1' ? 1 : 0;
+        if ($bloqueaOt === 1) {
+            $liberaHerramientas = 1;
+        }
 
         # Verificación de campos obligatorios #
         if ($nombre_estado == '') {
@@ -762,6 +767,16 @@ class configController extends mainModel
                 'campo_nombre' => 'color',
                 'campo_marcador' => ':color',
                 'campo_valor' => $color
+            ],
+            [
+                'campo_nombre' => 'libera_herramientas',
+                'campo_marcador' => ':libera_herramientas',
+                'campo_valor' => $liberaHerramientas
+            ],
+            [
+                'campo_nombre' => 'bloquea_ot',
+                'campo_marcador' => ':bloquea_ot',
+                'campo_valor' => $bloqueaOt
             ]
         ];
 
@@ -799,7 +814,21 @@ class configController extends mainModel
         $datosC = $this->ejecutarConsultaConParametros("SELECT " . $this->columnasTablaSql('estado_ot') . " FROM estado_ot WHERE id_ai_estado = :id", [':id' => $id]);
         $datosC = $datosC->fetch();
 
-        $datos = $this->ejecutarConsultaConParametros("SELECT " . $this->columnasTablaSql('detalle_orden') . " FROM detalle_orden WHERE id_ai_estado = :id", [':id' => $id]);
+        $estadoProtegido = (int)($datosC['bloquea_ot'] ?? 0) === 1
+            || mb_strtoupper((string)($datosC['nombre_estado'] ?? ''), 'UTF-8') === 'EJECUTADA';
+
+        if ($datosC && $estadoProtegido) {
+            $alerta = [
+                'tipo' => 'simple',
+                'titulo' => 'Estado protegido',
+                'texto' => 'El estado configurado para bloquear la O.T. no puede modificarse ni eliminarse.',
+                'icono' => 'warning'
+            ];
+            return json_encode($alerta);
+            exit();
+        }
+
+        $datos = $this->ejecutarConsultaConParametros("SELECT n_ot FROM orden_trabajo WHERE id_ai_estado = :id AND std_reg = 1", [':id' => $id]);
         if ($datos->rowCount() > 0) {
             $alerta = [
                 'tipo' => 'simple',
@@ -838,7 +867,12 @@ class configController extends mainModel
         $busqueda = $this->limpiarCadena($busqueda);
 
         // Por ahora no usas búsqueda, se deja listo para futuro
-        $consulta_datos  = "SELECT " . $this->columnasTablaSql('estado_ot') . " FROM estado_ot WHERE std_reg='1' ORDER BY id_ai_estado ASC";
+        $consulta_datos  = "SELECT " . $this->columnasTablaSql('estado_ot') . ",
+                " . $this->estadoOtLiberaHerramientasExpr() . " AS libera_herramientas_estado,
+                " . $this->estadoOtBloqueaOtExpr() . " AS bloquea_ot_estado
+            FROM estado_ot
+            WHERE std_reg='1'
+            ORDER BY id_ai_estado ASC";
         $consulta_total  = "SELECT COUNT(id_ai_estado) FROM estado_ot where std_reg='1'";
 
         $datos = $this->ejecutarConsulta($consulta_datos);
@@ -859,6 +893,8 @@ class configController extends mainModel
                                 <th class="clearfix">#</th>
                                 <th class="clearfix">Nombre</th>
                                 <th class="text-center">Indicador</th>
+                                <th class="text-center">Libera Herr.</th>
+                                <th class="text-center">Bloquea O.T.</th>
                                 <th class="text-center" colspan="2">Acciones</th>
                             </tr>
                         </thead>
@@ -878,6 +914,33 @@ class configController extends mainModel
                 $id     = $rows["id_ai_estado"];
                 $nombre = $rows["nombre_estado"];
                 $color  = $rows["color"];
+                $liberaHerramientas = (int)($rows["libera_herramientas_estado"] ?? $rows["libera_herramientas"] ?? 0) === 1;
+                $bloqueaOt = (int)($rows["bloquea_ot_estado"] ?? $rows["bloquea_ot"] ?? 0) === 1;
+                $protegido = $bloqueaOt || mb_strtoupper((string)$nombre, 'UTF-8') === 'EJECUTADA';
+                $badgeLibera = $liberaHerramientas
+                    ? '<span class="badge bg-success-subtle text-success border border-success-subtle">SI</span>'
+                    : '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">NO</span>';
+                $badgeBloquea = $bloqueaOt
+                    ? '<span class="badge bg-warning-subtle text-warning border border-warning-subtle">SI</span>'
+                    : '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">NO</span>';
+                $btnEditar = $protegido
+                    ? '<button type="button" class="btn btn-secondary" title="Estado protegido" disabled><i class="bi bi-lock"></i></button>'
+                    : '<a href="#"
+                        class="btn btn-warning text-dark js-estado-edit"
+                        data-bs-toggle="modal"
+                        data-bs-target="#ventanaModalModificarEstado"
+                        data-id="' . $id . '"
+                        title="Modificar">
+                            <i class="bi bi-pencil text-white"></i>
+                        </a>';
+                $btnEliminar = $protegido
+                    ? '<button type="button" class="btn btn-secondary" title="Estado protegido" disabled><i class="bi bi-lock"></i></button>'
+                    : '<button type="button"
+                                class="btn btn-danger js-estado-del"
+                                data-id="' . $id . '"
+                                title="Eliminar">
+                            <i class="bi bi-trash" style="color:white;"></i>
+                        </button>';
 
                 /* ===== TABLA DESKTOP ===== */
                 $tabla .= '
@@ -901,25 +964,13 @@ class configController extends mainModel
                         " title="' . $nombre . '"></span>
                     </td>
 
-                    <td class="col-p text-center">
-                        <a href="#"
-                        class="btn btn-warning text-dark js-estado-edit"
-                        data-bs-toggle="modal"
-                        data-bs-target="#ventanaModalModificarEstado"
-                        data-id="' . $id . '"
-                        title="Modificar">
-                            <i class="bi bi-pencil text-white"></i>
-                        </a>
-                    </td>
+                    <td class="text-center col-p">' . $badgeLibera . '</td>
 
-                    <td class="col-p text-center">
-                        <button type="button"
-                                class="btn btn-danger js-estado-del"
-                                data-id="' . $id . '"
-                                title="Eliminar">
-                            <i class="bi bi-trash" style="color:white;"></i>
-                        </button>
-                    </td>
+                    <td class="text-center col-p">' . $badgeBloquea . '</td>
+
+                    <td class="col-p text-center">' . $btnEditar . '</td>
+
+                    <td class="col-p text-center">' . $btnEliminar . '</td>
 
                 </tr>
             ';
@@ -938,27 +989,22 @@ class configController extends mainModel
                                 height:1.15rem;
                                 background-color:' . $color . ';
                             "></span>
-                            <b>' . $nombre . '</b>
+                            <b>' . $nombre . '</b>' . ($protegido ? '<span class="badge bg-dark ms-2">Protegido</span>' : '') . '
                         </span>
                     </div>
 
                     <div class="tool-body">
+                        <div class="tool-row">
+                            <div class="tool-label">Libera herramientas</div>
+                            <div class="tool-value">' . ($liberaHerramientas ? 'Si' : 'No') . '</div>
+                        </div>
+                        <div class="tool-row">
+                            <div class="tool-label">Bloquea O.T.</div>
+                            <div class="tool-value">' . ($bloqueaOt ? 'Si' : 'No') . '</div>
+                        </div>
                         <div class="tool-actions">
-                           <a href="#"
-                                class="btn btn-warning text-dark btn-sm js-estado-edit"
-                                data-bs-toggle="modal"
-                                data-bs-target="#ventanaModalModificarEstado"
-                                data-id="' . $id . '"
-                                title="Modificar">
-                                    <i class="bi bi-pencil text-white"></i>
-                                </a>
-
-                                <button type="button"
-                                        class="btn btn-danger btn-sm js-estado-del"
-                                        data-id="' . $id . '"
-                                        title="Eliminar">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                           ' . str_replace('class="btn ', 'class="btn btn-sm ', $btnEditar) . '
+                           ' . str_replace('class="btn ', 'class="btn btn-sm ', $btnEliminar) . '
 
                         </div>
                     </div>
@@ -970,7 +1016,7 @@ class configController extends mainModel
         } else {
             $tabla .= '
             <tr class="align-middle">
-                <td class="text-center" colspan="5">No hay registros en el sistema</td>
+                <td class="text-center" colspan="7">No hay registros en el sistema</td>
             </tr>
         ';
 

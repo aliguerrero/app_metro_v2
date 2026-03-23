@@ -11,18 +11,20 @@ if (!appsec_is_digits($id)) {
 }
 
 $stmt = $mainModel->ejecutarConsultaConParametros(
-    "SELECT e.nombre_estado,
-            COUNT(dord.id_ai_estado) AS total_ordenes,
+    "SELECT estado_ot AS nombre_estado,
+            COUNT(DISTINCT n_ot) AS total_ordenes,
             ROUND(
-                COUNT(dord.id_ai_estado) * 100.0 /
-                NULLIF((SELECT COUNT(1) FROM detalle_orden WHERE id_ai_turno = :turno_total), 0),
+                COUNT(DISTINCT n_ot) * 100.0 /
+                NULLIF((
+                    SELECT COUNT(DISTINCT n_ot)
+                    FROM vw_ot_detallada
+                    WHERE id_ai_turno = :turno_total
+                ), 0),
                 2
             ) AS porcentaje_total
-     FROM detalle_orden dord
-     JOIN turno_trabajo tu ON dord.id_ai_turno = tu.id_ai_turno
-     JOIN estado_ot e ON dord.id_ai_estado = e.id_ai_estado
-     WHERE dord.id_ai_turno = :turno
-     GROUP BY dord.id_ai_estado, e.nombre_estado",
+     FROM vw_ot_detallada
+     WHERE id_ai_turno = :turno
+     GROUP BY id_ai_estado, estado_ot",
     [
         ':turno_total' => (int)$id,
         ':turno' => (int)$id,
@@ -31,4 +33,3 @@ $stmt = $mainModel->ejecutarConsultaConParametros(
 
 $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
 appsec_json_response($rows);
-

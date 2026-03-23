@@ -1,0 +1,19 @@
+Modulo: usuarios
+Operacion: listar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/userController.php -> listarUsuarioControlador
+SELECT
+                id_ai_user,
+                id_empleado AS id_user,
+                username,
+                id_rol AS tipo,
+                COALESCE(NULLIF(nombre_empleado, ''), id_empleado) AS nombre_empleado,
+                COALESCE(categoria_empleado, 'SIN CATEGORIA') AS nombre_categoria,
+                nombre_rol
+             FROM vw_usuario_empleado
+             WHERE id_empleado <> :sessionId
+               AND std_reg = 1
+             ORDER BY COALESCE(NULLIF(nombre_empleado, ''), id_empleado) ASC

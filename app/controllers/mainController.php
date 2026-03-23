@@ -129,31 +129,18 @@ class mainController extends mainModel
         $tabla = '';
         
         $consulta_datos = "SELECT 
-            e.nombre_estado, 
-            COUNT(ot.id_ai_estado) AS total_registros,
-                ROUND((COUNT(ot.id_ai_estado) * 100.0) / SUM(COUNT(ot.id_ai_estado)) OVER (), 2) AS porcentaje_total
-            FROM 
-                detalle_orden ot
-            JOIN 
-                estado_ot e ON ot.id_ai_estado = e.id_ai_estado
-            GROUP BY 
-            ot.id_ai_estado, e.nombre_estado;
+            nombre_estado, 
+            COUNT(1) AS total_registros,
+            ROUND((COUNT(1) * 100.0) / SUM(COUNT(1)) OVER (), 2) AS porcentaje_total
+            FROM vw_ot_resumen
+            WHERE std_reg = 1
+            GROUP BY id_ai_estado, nombre_estado;
         ";
-
-        $consulta_total = "SELECT COUNT(ot.id_ai_estado) FROM 
-                detalle_orden ot
-            JOIN 
-                estado_ot e ON ot.id_ai_estado = e.id_ai_estado
-            GROUP BY 
-            ot.id_ai_estado, e.nombre_estado;"
-        ;
         
 
         $datos = $this->ejecutarConsulta($consulta_datos);
-        $datos = $datos->fetchAll();
-
-        $total = $this->ejecutarConsulta($consulta_total);
-        $total = (int) $total->fetchColumn();
+        $datos = $datos ? $datos->fetchAll(\PDO::FETCH_ASSOC) : [];
+        $total = count($datos);
 
 
         $contador = 0;
@@ -189,31 +176,17 @@ class mainController extends mainModel
         $tabla = '';
         
         $consulta_datos = "SELECT 
-            e.nombre_turno, 
-            COUNT(ot.id_ai_turno) AS total_registros,
-                ROUND((COUNT(ot.id_ai_turno) * 100.0) / SUM(COUNT(ot.id_ai_turno)) OVER (), 2) AS porcentaje_total
-            FROM 
-                detalle_orden ot
-            JOIN 
-                turno_trabajo e ON ot.id_ai_turno = e.id_ai_turno
-            GROUP BY 
-            ot.id_ai_turno, e.nombre_turno;
+            nombre_turno, 
+            COUNT(id_ai_detalle) AS total_registros,
+            ROUND((COUNT(id_ai_detalle) * 100.0) / SUM(COUNT(id_ai_detalle)) OVER (), 2) AS porcentaje_total
+            FROM vw_ot_detallada
+            GROUP BY id_ai_turno, nombre_turno;
         ";
-
-        $consulta_total = "SELECT COUNT(ot.id_ai_estado) FROM 
-                detalle_orden ot
-            JOIN 
-                turno_trabajo e ON ot.id_ai_turno = e.id_ai_turno
-            GROUP BY 
-            ot.id_ai_turno, e.nombre_turno;"
-        ;
         
 
         $datos = $this->ejecutarConsulta($consulta_datos);
-        $datos = $datos->fetchAll();
-
-        $total = $this->ejecutarConsulta($consulta_total);
-        $total = (int) $total->fetchColumn();
+        $datos = $datos ? $datos->fetchAll(\PDO::FETCH_ASSOC) : [];
+        $total = count($datos);
 
 
         $contador = 0;
@@ -249,13 +222,13 @@ class mainController extends mainModel
     {
         $consulta = "
             SELECT
-                (SELECT COUNT(1) FROM orden_trabajo WHERE std_reg = 1) AS total_ot,
-                (SELECT COUNT(1) FROM detalle_orden) AS total_detalles,
-                (SELECT COUNT(1) FROM detalle_orden WHERE id_ai_estado = 1) AS detalles_ejecutados,
-                (SELECT COUNT(1) FROM detalle_orden WHERE id_ai_estado <> 1) AS detalles_pendientes,
-                (SELECT COUNT(1) FROM herramienta WHERE std_reg = 1) AS herramientas,
+                (SELECT COUNT(1) FROM vw_ot_resumen WHERE std_reg = 1) AS total_ot,
+                (SELECT COUNT(1) FROM vw_ot_detallada) AS total_detalles,
+                (SELECT COUNT(1) FROM vw_ot_resumen WHERE std_reg = 1 AND COALESCE(bloquea_ot, 0) = 1) AS detalles_ejecutados,
+                (SELECT COUNT(1) FROM vw_ot_resumen WHERE std_reg = 1 AND COALESCE(bloquea_ot, 0) <> 1) AS detalles_pendientes,
+                (SELECT COUNT(1) FROM vw_herramienta_disponibilidad WHERE std_reg = 1) AS herramientas,
                 (SELECT COUNT(1) FROM miembro WHERE std_reg = 1) AS miembros_activos,
-                (SELECT COUNT(1) FROM user_system WHERE std_reg = 1) AS usuarios_activos,
+                (SELECT COUNT(1) FROM vw_usuario_empleado WHERE std_reg = 1) AS usuarios_activos,
                 (SELECT COUNT(1) FROM log_user WHERE fecha_hora >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS logs_semana
         ";
 

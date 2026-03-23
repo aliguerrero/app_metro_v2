@@ -1,6 +1,0 @@
-Modulo: miembros
-Operacion: eliminar
-
-Sentencias SQL:
-
-UPDATE miembro SET std_reg = 0 WHERE id_miembro = :id_miembro;

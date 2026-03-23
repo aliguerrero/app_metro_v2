@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ? document.getElementById('url').value
         : (window.APP_URL || '/');
 
-    // Normaliza base para evitar errores de slash
     const base = (dir.endsWith('/') ? dir : dir + '/');
 
     const tipoReporte = document.getElementById('tipo_reporte');
@@ -17,7 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const filtrosOt = document.getElementById('filtros_ot');
     const filtrosGeneral = document.getElementById('filtros_general');
 
-    // OT filtros
     const fNot = document.getElementById('f_n_ot');
     const fDesde = document.getElementById('f_desde');
     const fHasta = document.getElementById('f_hasta');
@@ -26,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const fEstado = document.getElementById('f_estado');
     const fUsuario = document.getElementById('f_usuario');
 
-    // General
     const fQ = document.getElementById('f_q');
 
     const btnPrev = document.getElementById('btn_previsualizar');
@@ -47,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const setPreviewHtml = (html) => {
         previewFrame.srcdoc =
-            html || `<div style="font-family:Arial;padding:16px;color:#666;">Sin vista previa</div>`;
+            html || '<div style="font-family:Arial;padding:16px;color:#666;">Sin vista previa</div>';
     };
 
     const buildParams = () => {
@@ -58,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
         params.set('membrete', incMembrete.checked ? '1' : '0');
         params.set('logo', incLogo.checked ? '1' : '0');
 
-        // OT
         params.set('n_ot', (fNot && fNot.value) ? fNot.value.trim() : '');
         params.set('desde', (fDesde && fDesde.value) ? fDesde.value : '');
         params.set('hasta', (fHasta && fHasta.value) ? fHasta.value : '');
@@ -67,7 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
         params.set('estado', (fEstado && fEstado.value) ? fEstado.value : '');
         params.set('usuario', (fUsuario && fUsuario.value) ? fUsuario.value : '');
 
-        // General
         params.set('q', (fQ && fQ.value) ? fQ.value.trim() : '');
 
         return params;
@@ -75,8 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const actualizarSecciones = () => {
         const t = tipoReporte.value;
-
         const esOT = (t === 'ot_resumen' || t === 'ot_detallado');
+
         filtrosOt.style.display = esOT ? '' : 'none';
         filtrosGeneral.style.display = (!esOT && t) ? '' : 'none';
 
@@ -86,22 +81,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const aplicarPresetTipo = () => {
+        const t = tipoReporte.value;
+
+        if (t === 'ot_detallado') {
+            if (orientacion.value === 'portrait') {
+                orientacion.value = 'landscape';
+                orientacion.dataset.autoPreset = '1';
+            }
+            return;
+        }
+
+        if (orientacion.dataset.autoPreset === '1') {
+            orientacion.value = 'portrait';
+            delete orientacion.dataset.autoPreset;
+        }
+    };
+
     const cargarReportesGenerados = async () => {
         if (!reportesGeneradosWrap) return;
 
-        reportesGeneradosWrap.innerHTML = `<div class="text-muted">Cargando historial de reportes...</div>`;
+        reportesGeneradosWrap.innerHTML = '<div class="text-muted">Cargando historial de reportes...</div>';
 
         try {
             const res = await fetch(base + 'app/controllers/reporteGeneradoList.php', {
                 method: 'GET',
                 credentials: 'include',
-                headers: { 'Accept': 'text/html' }
+                headers: { Accept: 'text/html' }
             });
 
             const html = await res.text();
 
             if (!res.ok) {
-                reportesGeneradosWrap.innerHTML = `<div class="alert alert-danger m-0">No se pudo cargar el historial de reportes.</div>`;
+                reportesGeneradosWrap.innerHTML = '<div class="alert alert-danger m-0">No se pudo cargar el historial de reportes.</div>';
                 return;
             }
 
@@ -109,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
             reportesGeneradosWrap.dataset.loaded = '1';
         } catch (error) {
             console.error('Error cargando historial de reportes:', error);
-            reportesGeneradosWrap.innerHTML = `<div class="alert alert-danger m-0">Error cargando el historial de reportes.</div>`;
+            reportesGeneradosWrap.innerHTML = '<div class="alert alert-danger m-0">Error cargando el historial de reportes.</div>';
             reportesGeneradosWrap.dataset.loaded = '0';
         }
     };
@@ -118,18 +130,20 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const res = await fetch(base + 'app/controllers/cargarFiltrosReporte.php', {
                 method: 'GET',
-                credentials: 'include', // <<--- IMPORTANTE (envía cookie de sesión)
-                headers: { 'Accept': 'application/json' }
+                credentials: 'include',
+                headers: { Accept: 'application/json' }
             });
 
             if (res.status === 401) {
-                console.error('401: sesión no iniciada (cookie no enviada o sesión expirada)');
+                console.error('401: sesion no iniciada (cookie no enviada o sesion expirada)');
                 return;
             }
+
             if (res.status === 403) {
                 console.error('403: permiso denegado (perm_ot_view)');
                 return;
             }
+
             if (!res.ok) {
                 console.error('HTTP error cargando filtros:', res.status);
                 return;
@@ -142,9 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Areas
             if (fArea && Array.isArray(data.areas)) {
-                data.areas.forEach(a => {
+                data.areas.forEach((a) => {
                     const opt = document.createElement('option');
                     opt.value = a.id_area ?? a.id_ai_area ?? '';
                     opt.textContent = a.nombre_area;
@@ -152,9 +165,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // Sitios
             if (fSitio && Array.isArray(data.sitios)) {
-                data.sitios.forEach(s => {
+                data.sitios.forEach((s) => {
                     const opt = document.createElement('option');
                     opt.value = s.id_sitio ?? s.id_ai_sitio ?? '';
                     opt.textContent = s.nombre_sitio;
@@ -162,9 +174,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // Estados
             if (fEstado && Array.isArray(data.estados)) {
-                data.estados.forEach(e => {
+                data.estados.forEach((e) => {
                     const opt = document.createElement('option');
                     opt.value = e.id_estado ?? e.id_ai_estado ?? '';
                     opt.textContent = e.nombre_estado;
@@ -172,16 +183,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // Usuarios (operadores/técnicos)
             if (fUsuario && Array.isArray(data.usuarios)) {
-                data.usuarios.forEach(u => {
+                data.usuarios.forEach((u) => {
                     const opt = document.createElement('option');
                     opt.value = u.id_user;
                     opt.textContent = `${u.user} (${u.username})`;
                     fUsuario.appendChild(opt);
                 });
             }
-
         } catch (e) {
             console.error('Error cargando combos de reportes:', e);
         }
@@ -190,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const previsualizar = async () => {
         const t = tipoReporte.value;
         if (!t) {
-            setPreviewHtml(`<div style="font-family:Arial;padding:16px;">Selecciona un tipo de reporte.</div>`);
+            setPreviewHtml('<div style="font-family:Arial;padding:16px;">Selecciona un tipo de reporte.</div>');
             return;
         }
 
@@ -199,22 +208,22 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const res = await fetch(base + 'app/controllers/cargarDatosReporte.php?' + params.toString(), {
                 credentials: 'include',
-                headers: { 'Accept': 'application/json' }
+                headers: { Accept: 'application/json' }
             });
 
-            // Lee SIEMPRE como texto primero para evitar "Unexpected token <"
             const raw = await res.text();
 
             if (res.status === 401) {
-                setPreviewHtml(`<div style="font-family:Arial;padding:16px;color:#b00;">Sesión no iniciada o expirada.</div>`);
+                setPreviewHtml('<div style="font-family:Arial;padding:16px;color:#b00;">Sesion no iniciada o expirada.</div>');
                 return;
             }
+
             if (res.status === 403) {
-                setPreviewHtml(`<div style="font-family:Arial;padding:16px;color:#b00;">Permiso denegado.</div>`);
+                setPreviewHtml('<div style="font-family:Arial;padding:16px;color:#b00;">Permiso denegado.</div>');
                 return;
             }
+
             if (!res.ok) {
-                // si viene HTML, muéstralo para debug
                 const safe = (raw || '')
                     .replace(/&/g, '&amp;')
                     .replace(/</g, '&lt;')
@@ -229,7 +238,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Si el backend devolvió HTML (warnings/fatal), muéstralo y corta
             if (raw.trim().startsWith('<')) {
                 console.error('Respuesta no JSON (probable error PHP):', raw);
 
@@ -240,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 setPreviewHtml(`
         <div style="font-family:Arial;padding:16px;color:#b00;">
-          El servidor devolvió HTML en lugar de JSON (probable error PHP).
+          El servidor devolvio HTML en lugar de JSON (probable error PHP).
           <pre style="white-space:pre-wrap;background:#fff3f3;padding:12px;border:1px solid #f2b8b8;margin-top:12px;">${safe}</pre>
         </div>
       `);
@@ -251,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 data = JSON.parse(raw);
             } catch (e) {
-                console.error('JSON inválido:', raw);
+                console.error('JSON invalido:', raw);
 
                 const safe = (raw || '')
                     .replace(/&/g, '&amp;')
@@ -260,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 setPreviewHtml(`
         <div style="font-family:Arial;padding:16px;color:#b00;">
-          Respuesta no es JSON válido.
+          Respuesta no es JSON valido.
           <pre style="white-space:pre-wrap;background:#fff3f3;padding:12px;border:1px solid #f2b8b8;margin-top:12px;">${safe}</pre>
         </div>
       `);
@@ -274,33 +282,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     `<div style="font-family:Arial;padding:16px;color:#b00;">${data?.msg ? data.msg : 'No se pudo generar la vista previa.'}</div>`
                 );
             }
-
         } catch (e) {
             console.error(e);
-            setPreviewHtml(`<div style="font-family:Arial;padding:16px;color:#b00;">Error generando vista previa.</div>`);
+            setPreviewHtml('<div style="font-family:Arial;padding:16px;color:#b00;">Error generando vista previa.</div>');
         }
     };
 
     const autoPreview = debounce(previsualizar, 500);
 
-    // Eventos
     tipoReporte.addEventListener('change', () => {
+        aplicarPresetTipo();
         actualizarSecciones();
         autoPreview();
     });
 
-    [papel, orientacion, incMembrete, incLogo].forEach(el => {
+    [papel, orientacion, incMembrete, incLogo].forEach((el) => {
         el.addEventListener('change', autoPreview);
     });
 
-    // OT: auto mientras se edita
-    [fNot, fDesde, fHasta, fArea, fSitio, fEstado, fUsuario].forEach(el => {
+    [fNot, fDesde, fHasta, fArea, fSitio, fEstado, fUsuario].forEach((el) => {
         if (!el) return;
         el.addEventListener('input', autoPreview);
         el.addEventListener('change', autoPreview);
     });
 
-    // General: auto mientras escribe
     if (fQ) fQ.addEventListener('input', autoPreview);
 
     btnPrev.addEventListener('click', (e) => {
@@ -315,6 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const params = buildParams();
         window.open(base + 'app/controllers/exportarReportePdf.php?' + params.toString(), '_blank');
+
         window.setTimeout(() => {
             const modalVisible = modalReportesGenerados && modalReportesGenerados.classList.contains('show');
             const historialYaCargado = reportesGeneradosWrap && reportesGeneradosWrap.dataset.loaded === '1';
@@ -336,10 +342,10 @@ document.addEventListener('DOMContentLoaded', () => {
         modalReportesGenerados.addEventListener('shown.bs.modal', cargarReportesGenerados);
     }
 
-    // Init
+    aplicarPresetTipo();
     actualizarSecciones();
     cargarCombos().then(() => {
-        // opcional: previsualizar de una vez si ya hay selección
+        // Opcional: previsualizar de una vez si ya hay seleccion.
         // previsualizar();
     });
 });

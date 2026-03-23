@@ -1,6 +1,0 @@
-Modulo: estados_ot
-Operacion: buscar
-
-Sentencias SQL:
-
-SELECT id_ai_estado, nombre_estado, color, std_reg FROM estado_ot WHERE id_ai_estado = :id LIMIT 1;

@@ -1,0 +1,52 @@
+Modulo: ordenes_trabajo
+Operacion: crear
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/otController.php -> registrarOtControlador
+SELECT n_ot FROM orden_trabajo WHERE n_ot = :n_ot
+
+SQL [2] - app/controllers/otController.php -> registrarOtControlador
+SELECT {{ $this->columnasTablaSql('area_trabajo') }} FROM area_trabajo WHERE nomeclatura = :area LIMIT 1
+
+SQL [3] - app/controllers/otController.php -> registrarOtControlador
+CALL sp_ot_crear(:n_ot, :id_ai_area, :id_user, :id_ai_sitio, :id_ai_estado, :nombre_trab, :fecha, :semana, :mes)
+
+SQL [4] - app/controllers/cargarDatosDetalle.php
+SELECT 1 FROM user_system WHERE id_empleado = :id LIMIT 1
+
+SQL [5] - app/controllers/cargarDatosDetalle.php
+SELECT COUNT(1)
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = :t
+              AND COLUMN_NAME = :c
+
+Fragmento SQL [6] - app/controllers/cargarDatosDetalle.php
+AND fecha = :fecha
+
+Fragmento SQL [7] - app/controllers/cargarDatosDetalle.php
+LIMIT 1
+
+SQL [8] - app/controllers/cargarDatosDetalle.php
+SELECT {{ implode(', ', $select) }}
+         FROM orden_trabajo
+         WHERE n_ot = :not
+           AND std_reg = 1
+         LIMIT 1
+
+SQL [9] - app/controllers/cargarDatosDetalle.php
+CALL sp_ot_agregar_detalle(
+            :not,
+            :fecha,
+            :desc,
+            :turno,
+            :cco,
+            :tec,
+            :ccf,
+            :cant,
+            :hora_inicio,
+            :hora_fin,
+            :obs
+        )

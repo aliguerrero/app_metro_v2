@@ -1,6 +1,0 @@
-Modulo: categorias_empleado
-Operacion: eliminar
-
-Sentencias SQL:
-
-UPDATE categoria_empleado SET std_reg = 0 WHERE id_ai_categoria_empleado = :id_ai_categoria_empleado;

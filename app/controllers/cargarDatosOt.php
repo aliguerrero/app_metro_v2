@@ -20,7 +20,15 @@ $mainModel = new mainModel();
 $id = $mainModel->limpiarCadena($_POST['id'] ?? '');
 
 $stmt = $mainModel->ejecutarConsultaConParametros(
-    "SELECT " . $mainModel->columnasTablaSql('orden_trabajo') . " FROM orden_trabajo WHERE n_ot = :id AND std_reg = 1 LIMIT 1",
+    "SELECT *,
+            CASE
+              WHEN COALESCE(ot_finalizada, 0) = 1 OR COALESCE(bloquea_ot, 0) = 1 THEN 1
+              ELSE 0
+            END AS ot_finalizada
+     FROM vw_ot_resumen
+     WHERE n_ot = :id
+       AND std_reg = 1
+     LIMIT 1",
     [':id' => $id]
 );
 

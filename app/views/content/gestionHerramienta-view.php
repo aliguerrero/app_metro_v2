@@ -75,6 +75,7 @@
         include 'modals/modalModificarHerramienta.php';
     } ?>
     <?php include 'modals/modalVerHerramienta.php'; ?>
+    <?php include 'modals/modalHerramientaOcupaciones.php'; ?>
 
     <?php require_once "./app/views/scripts/script-herr.php"; ?>
 </div>

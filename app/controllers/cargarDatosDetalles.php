@@ -24,7 +24,6 @@ function requirePerm(string $permKey): void
 try {
     $mainModel = new mainModel();
     $detalleCols = $mainModel->columnasTablaSql('detalle_orden', 'd');
-    $estadoCols = $mainModel->columnasTablaSql('estado_ot', 'e');
 
     $tipoBusqueda = $mainModel->limpiarCadena($_GET['tipoBusqueda'] ?? '');
 
@@ -44,12 +43,16 @@ try {
             }
 
             $stmt = $mainModel->ejecutarConsultaConParametros(
-                "SELECT {$detalleCols}, COALESCE(NULLIF(emp.nombre_empleado, ''), d.id_user_act) AS user, {$estadoCols}
-                 FROM detalle_orden d
-                 LEFT JOIN empleado emp ON emp.id_empleado = d.id_user_act
-                 JOIN estado_ot e ON d.id_ai_estado = e.id_ai_estado
-                 WHERE d.n_ot = :not
-                 ORDER BY d.fecha DESC, d.id_ai_detalle DESC",
+                "SELECT
+                    id_ai_detalle,
+                    n_ot,
+                    fecha_detalle AS fecha,
+                    descripcion,
+                    id_user_act,
+                    COALESCE(NULLIF(usuario_act_nombre, ''), id_user_act) AS user
+                 FROM vw_ot_detallada
+                 WHERE n_ot = :not
+                 ORDER BY fecha_detalle DESC, id_ai_detalle DESC",
                 [':not' => $id]
             );
 

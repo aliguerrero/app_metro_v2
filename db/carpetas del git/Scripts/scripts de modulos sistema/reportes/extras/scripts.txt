@@ -1,0 +1,92 @@
+Modulo: reportes
+Operacion: extras
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/exportarReportePdf.php
+SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = :t
+              AND COLUMN_NAME = :c
+
+SQL [2] - app/controllers/exportarReportePdf.php
+SELECT {{ $mm->columnasTablaSql('empresa_config') }} FROM empresa_config WHERE id = 1 LIMIT 1
+
+SQL [3] - app/controllers/exportarReportePdf.php
+SELECT *
+              FROM vw_ot_resumen
+              WHERE n_ot = :id AND std_reg = 1
+              LIMIT 1
+
+SQL [4] - app/controllers/exportarReportePdf.php
+SELECT
+                    id_ai_detalle,
+                    fecha_detalle AS fecha,
+                    nombre_turno,
+                    COALESCE(NULLIF(usuario_act_nombre, ''), id_user_act) AS tecnico_nombre,
+                    miembro_cco_nombre AS cco_nombre,
+                    miembro_ccf_nombre AS ccf_nombre,
+                    descripcion,
+                    hora_inicio,
+                    hora_fin,
+                    observacion
+                  FROM vw_ot_detallada
+                  WHERE n_ot = :id
+                  ORDER BY id_ai_detalle ASC
+
+SQL [5] - app/controllers/exportarReportePdf.php
+SELECT {{ $mm->columnasTablaSql('miembro') }}{{ " FROM miembro {$where} ORDER BY nombre_miembro ASC LIMIT 5000" }}
+
+SQL [6] - app/controllers/reporteController.php -> renderOtHtml
+SELECT
+            ot.*,
+            ot.nombre_estado AS estado_ot_nombre,
+            COALESCE(ot.empleado_responsable, ot.id_user_responsable) AS responsable_nombre,
+            ot.username_responsable AS responsable_username
+          FROM vw_ot_resumen ot
+          WHERE {{ implode(" AND ", $where) }}{{ " ORDER BY ot.fecha DESC, ot.n_ot DESC $limit " }}
+
+SQL [7] - app/controllers/reporteController.php -> renderOtHtml
+SELECT
+                fecha_detalle AS fecha,
+                descripcion,
+                observacion,
+                cant_tec,
+                hora_inicio,
+                hora_fin,
+                nombre_turno,
+                miembro_cco_nombre AS cco_nombre,
+                miembro_ccf_nombre AS ccf_nombre,
+                COALESCE(NULLIF(usuario_act_nombre, ''), id_user_act) AS tecnico_nombre,
+                username_usuario_act AS tecnico_username
+              FROM vw_ot_detallada
+              WHERE n_ot = :n_ot
+              ORDER BY fecha_detalle ASC, id_ai_detalle ASC
+
+SQL [8] - app/controllers/reporteController.php -> renderOtHtml
+SELECT
+                {{ $this->columnasTablaSql('herramientaot', 'ho') }},
+                h.nombre_herramienta
+              FROM herramientaot ho
+              INNER JOIN herramienta h ON h.id_ai_herramienta = ho.id_ai_herramienta
+              WHERE ho.n_ot = :n_ot
+              ORDER BY ho.id_ai_herramientaOT ASC
+
+SQL [9] - app/controllers/reporteGeneradoController.php -> emitirReporteGuardado
+SELECT
+                id_ai_reporte_generado,
+                tipo_reporte,
+                titulo_reporte,
+                nombre_archivo,
+                ruta_archivo,
+                mime_type,
+                tamano_bytes,
+                id_user_generador,
+                nombre_user_generador,
+                username_generador,
+                created_at,
+                 std_reg
+             FROM vw_reportes_generados
+             WHERE id_ai_reporte_generado = :id
+             LIMIT 1

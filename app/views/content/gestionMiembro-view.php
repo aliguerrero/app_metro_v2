@@ -1,4 +1,4 @@
-<div class="tools-scope">
+﻿<div class="tools-scope">
     <?php
     $perms = $_SESSION['permisos'] ?? [];
     $can = function (string $key) use ($perms): bool {
@@ -17,7 +17,7 @@
     <div class="row pb-3">
         <div class="container-fluid">
             <div class="page-head">
-                <h3>Gestión de Miembros</h3>
+                <h3>Gestion de Miembros</h3>
             </div>
         </div>
     </div>
@@ -36,7 +36,7 @@
                         <div class="input-group tools-join flex-nowrap w-100">
                             <!-- MISMO id/name -->
                             <input class="form-control flex-grow-1" name="campo" id="campo" type="text"
-                                placeholder="Busqueda por código o nombre">
+                                placeholder="Busqueda por codigo, empleado o documento">
 
                             <?php if ($can('perm_miembro_add')) { ?>
                                 <button type="button" class="btn btn-success tools-join-btn flex-shrink-0"
@@ -73,7 +73,7 @@
             </div>
         </div>
 
-        <!-- Inclusión de modales de registro y modificación de miembros -->
+        <!-- InclusiÃ³n de modales de registro y modificaciÃ³n de miembros -->
         <?php if ($can('perm_miembro_add')) {
             include 'modals/modalRegistroMiembro.php';
         } ?>
@@ -84,3 +84,4 @@
         <?php require_once "./app/views/scripts/script-miem.php"; ?>
     </div>
 </div>
+

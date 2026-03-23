@@ -1,6 +1,0 @@
-Modulo: areas
-Operacion: listar
-
-Sentencias SQL:
-
-SELECT id_ai_area, nombre_area, nomeclatura, std_reg FROM area_trabajo WHERE std_reg = 1 ORDER BY id_ai_area ASC;

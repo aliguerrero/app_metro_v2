@@ -1,0 +1,102 @@
+Modulo: dashboard
+Operacion: listar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/mainController.php -> listarActividadesControlador
+SELECT
+                COALESCE(e.nombre_empleado, l.id_user) AS nombre_usuario,
+                ROUND(((SELECT COUNT(1) FROM log_user WHERE id_user = '{{ $_SESSION['id'] }}') / (SELECT COUNT(1) FROM log_user)) * 100, 2) AS porcentaje_participacion,
+                MIN(l.fecha_hora) AS primera_fecha_registro,
+                MAX(l.fecha_hora) AS ultima_fecha_registro
+                FROM
+                    log_user l
+                LEFT JOIN
+                    user_system u ON l.id_user = u.id_empleado
+                LEFT JOIN
+                    empleado e ON e.id_empleado = l.id_user
+                WHERE
+                l.id_user = '{{ $_SESSION['id'] }}';
+
+SQL [2] - app/controllers/mainController.php -> listarActividadesControlador
+SELECT COUNT(1)
+                FROM log_user l
+                WHERE
+                l.id_user = '{{ $_SESSION['id'] }}';
+
+SQL [3] - app/controllers/mainController.php -> listarCardEstadoControlador
+SELECT
+            nombre_estado,
+            COUNT(1) AS total_registros,
+            ROUND((COUNT(1) * 100.0) / SUM(COUNT(1)) OVER (), 2) AS porcentaje_total
+            FROM vw_ot_resumen
+            WHERE std_reg = 1
+            GROUP BY id_ai_estado, nombre_estado;
+
+SQL [4] - app/controllers/mainController.php -> listarCardTurnoControlador
+SELECT
+            nombre_turno,
+            COUNT(id_ai_detalle) AS total_registros,
+            ROUND((COUNT(id_ai_detalle) * 100.0) / SUM(COUNT(id_ai_detalle)) OVER (), 2) AS porcentaje_total
+            FROM vw_ot_detallada
+            GROUP BY id_ai_turno, nombre_turno;
+
+SQL [5] - app/controllers/mainController.php -> obtenerResumenDashboard
+SELECT
+                (SELECT COUNT(1) FROM vw_ot_resumen WHERE std_reg = 1) AS total_ot,
+                (SELECT COUNT(1) FROM vw_ot_detallada) AS total_detalles,
+                (SELECT COUNT(1) FROM vw_ot_resumen WHERE std_reg = 1 AND COALESCE(bloquea_ot, 0) = 1) AS detalles_ejecutados,
+                (SELECT COUNT(1) FROM vw_ot_resumen WHERE std_reg = 1 AND COALESCE(bloquea_ot, 0) <> 1) AS detalles_pendientes,
+                (SELECT COUNT(1) FROM vw_herramienta_disponibilidad WHERE std_reg = 1) AS herramientas,
+                (SELECT COUNT(1) FROM miembro WHERE std_reg = 1) AS miembros_activos,
+                (SELECT COUNT(1) FROM vw_usuario_empleado WHERE std_reg = 1) AS usuarios_activos,
+                (SELECT COUNT(1) FROM log_user WHERE fecha_hora >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS logs_semana
+
+SQL [6] - app/controllers/cargarGraficaMain.php
+SELECT nombre_estado, COUNT(1) AS total_registros
+     FROM vw_ot_resumen
+     WHERE std_reg = 1
+     GROUP BY id_ai_estado, nombre_estado
+
+SQL [7] - app/controllers/cargarDatosGraficaArea.php
+SELECT nombre_estado,
+            COUNT(1) AS total_ordenes,
+            ROUND(
+                COUNT(1) * 100.0 /
+                NULLIF((SELECT COUNT(1) FROM vw_ot_resumen WHERE id_ai_area = :area_total AND std_reg = 1), 0),
+                2
+            ) AS porcentaje_total
+     FROM vw_ot_resumen
+     WHERE id_ai_area = :area
+       AND std_reg = 1
+     GROUP BY id_ai_estado, nombre_estado
+
+SQL [8] - app/controllers/cargarDatosGraficaTurno.php
+SELECT nombre_turno,
+            COUNT(id_ai_detalle) AS total_registros,
+            ROUND((COUNT(id_ai_detalle) * 100.0) / SUM(COUNT(id_ai_detalle)) OVER (), 2) AS porcentaje_total
+     FROM vw_ot_detallada
+     GROUP BY id_ai_turno, nombre_turno
+
+SQL [9] - app/controllers/cargarDatosGraficaTurno2.php
+SELECT estado_ot AS nombre_estado,
+            COUNT(DISTINCT n_ot) AS total_ordenes,
+            ROUND(
+                COUNT(DISTINCT n_ot) * 100.0 /
+                NULLIF((
+                    SELECT COUNT(DISTINCT n_ot)
+                    FROM vw_ot_detallada
+                    WHERE id_ai_turno = :turno_total
+                ), 0),
+                2
+            ) AS porcentaje_total
+     FROM vw_ot_detallada
+     WHERE id_ai_turno = :turno
+     GROUP BY id_ai_estado, estado_ot
+
+SQL [10] - app/controllers/cargarGraficaArea.php
+SELECT {{ $mainModel->columnasTablaSql('area_trabajo') }} FROM area_trabajo WHERE std_reg = 1 ORDER BY id_ai_area ASC
+
+SQL [11] - app/controllers/cargarGraficaTurno.php
+SELECT {{ $mainModel->columnasTablaSql('turno_trabajo') }} FROM turno_trabajo WHERE std_reg = 1 ORDER BY id_ai_turno ASC

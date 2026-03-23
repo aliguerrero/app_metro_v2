@@ -262,23 +262,17 @@ class userController extends mainModel
 
         $stmt = $this->ejecutarConsultaParams(
             "SELECT
-                u.id_ai_user,
-                u.id_empleado AS id_user,
-                u.username,
-                u.tipo,
-                COALESCE(NULLIF(e.nombre_empleado, ''), u.id_empleado) AS nombre_empleado,
-                COALESCE(c.nombre_categoria, 'SIN CATEGORIA') AS nombre_categoria,
-                r.nombre_rol
-             FROM user_system u
-             INNER JOIN roles_permisos r
-               ON r.id = u.tipo
-             LEFT JOIN empleado e
-               ON e.id_empleado = u.id_empleado
-             LEFT JOIN categoria_empleado c
-               ON c.id_ai_categoria_empleado = e.id_ai_categoria_empleado
-             WHERE u.id_empleado <> :sessionId
-               AND u.std_reg = 1
-             ORDER BY COALESCE(NULLIF(e.nombre_empleado, ''), u.id_empleado) ASC",
+                id_ai_user,
+                id_empleado AS id_user,
+                username,
+                id_rol AS tipo,
+                COALESCE(NULLIF(nombre_empleado, ''), id_empleado) AS nombre_empleado,
+                COALESCE(categoria_empleado, 'SIN CATEGORIA') AS nombre_categoria,
+                nombre_rol
+             FROM vw_usuario_empleado
+             WHERE id_empleado <> :sessionId
+               AND std_reg = 1
+             ORDER BY COALESCE(NULLIF(nombre_empleado, ''), id_empleado) ASC",
             [':sessionId' => $_SESSION['id'] ?? '']
         );
 

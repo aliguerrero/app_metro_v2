@@ -1,8 +1,0 @@
-Modulo: dashboard
-Operacion: listar
-
-Sentencias SQL:
-
-SELECT ROUND(((SELECT COUNT(1) FROM log_user WHERE id_user = u.id_user) / (SELECT COUNT(1) FROM log_user)) * 100, 2) AS porcentaje_participacion FROM user_system u WHERE u.std_reg = 1;
-
-SELECT (SELECT COUNT(1) FROM orden_trabajo WHERE std_reg = 1) AS total_ot, (SELECT COUNT(1) FROM detalle_orden) AS total_detalles, (SELECT COUNT(1) FROM detalle_orden WHERE id_ai_estado = 1) AS detalles_ejecutados, (SELECT COUNT(1) FROM detalle_orden WHERE id_ai_estado <> 1) AS detalles_pendientes, (SELECT COUNT(1) FROM herramienta WHERE std_reg = 1) AS herramientas, (SELECT COUNT(1) FROM miembro WHERE std_reg = 1) AS miembros_activos, (SELECT COUNT(1) FROM user_system WHERE std_reg = 1) AS usuarios_activos, (SELECT COUNT(1) FROM log_user WHERE fecha_hora >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS logs_semana;

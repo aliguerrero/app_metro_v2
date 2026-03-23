@@ -5,23 +5,22 @@ appsec_require_perm('perm_ot_view');
 
 $mainModel = appsec_main_model();
 $tipoBusqueda = appsec_clean_string(appsec_request_string('tipoBusqueda', 'todo'));
-$otCols = $mainModel->columnasTablaSql('orden_trabajo', 'ot');
-
-$subDetalle = "
-    SELECT n_ot,
-           MAX(id_ai_estado) AS id_ai_estado,
-           MAX(id_user_act) AS id_user_act
-    FROM detalle_orden
-    GROUP BY n_ot
-";
-
 $params = [];
 $sql = "
-    SELECT {$otCols}, eo.nombre_estado, eo.color
-    FROM orden_trabajo ot
-    LEFT JOIN ({$subDetalle}) det ON ot.n_ot = det.n_ot
-    LEFT JOIN estado_ot eo ON det.id_ai_estado = eo.id_ai_estado
-    LEFT JOIN area_trabajo ae ON ot.id_ai_area = ae.id_ai_area
+    SELECT
+        ot.n_ot,
+        ot.fecha,
+        ot.nombre_trab,
+        ot.id_ai_estado,
+        ot.nombre_estado,
+        ot.color_estado AS color,
+        COALESCE(ot.herramientas_activas, 0) AS herramientas_activas,
+        CASE
+            WHEN COALESCE(ot.ot_finalizada, 0) = 1 OR COALESCE(ot.bloquea_ot, 0) = 1 THEN 1
+            ELSE 0
+        END AS ot_finalizada,
+        ot.area_nomeclatura
+    FROM vw_ot_resumen ot
     WHERE ot.std_reg = 1
 ";
 
@@ -49,7 +48,7 @@ switch ($tipoBusqueda) {
         $params[':fecha_f'] = $fechaF;
 
         if ($area !== '' && $area !== 'Seleccionar') {
-            $sql .= " AND ae.nomeclatura = :area";
+            $sql .= " AND ot.area_nomeclatura = :area";
             $params[':area'] = $area;
         }
         break;
@@ -62,11 +61,11 @@ switch ($tipoBusqueda) {
             appsec_fail('Estado invalido.', 400, ['error' => 'estado_invalido']);
         }
 
-        $sql .= " AND det.id_ai_estado = :estado";
+        $sql .= " AND ot.id_ai_estado = :estado";
         $params[':estado'] = (int)$estado;
 
         if ($area !== '' && $area !== 'Seleccionar') {
-            $sql .= " AND ae.nomeclatura = :area";
+            $sql .= " AND ot.area_nomeclatura = :area";
             $params[':area'] = $area;
         }
         break;
@@ -79,11 +78,16 @@ switch ($tipoBusqueda) {
             appsec_fail('Usuario invalido.', 400, ['error' => 'usuario_invalido']);
         }
 
-        $sql .= " AND det.id_user_act = :user";
+        $sql .= " AND EXISTS (
+            SELECT 1
+            FROM vw_ot_detallada det
+            WHERE det.n_ot = ot.n_ot
+              AND det.id_user_act = :user
+        )";
         $params[':user'] = (int)$user;
 
         if ($area !== '' && $area !== 'Seleccionar') {
-            $sql .= " AND ae.nomeclatura = :area";
+            $sql .= " AND ot.area_nomeclatura = :area";
             $params[':area'] = $area;
         }
         break;

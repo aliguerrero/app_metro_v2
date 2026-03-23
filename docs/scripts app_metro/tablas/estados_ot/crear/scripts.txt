@@ -1,6 +1,0 @@
-Modulo: estados_ot
-Operacion: crear
-
-Sentencias SQL:
-
-INSERT INTO estado_ot (nombre_estado, color, std_reg) VALUES (:nombre_estado, :color, 1);

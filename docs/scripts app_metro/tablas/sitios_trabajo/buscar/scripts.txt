@@ -1,6 +1,0 @@
-Modulo: sitios_trabajo
-Operacion: buscar
-
-Sentencias SQL:
-
-SELECT id_ai_sitio, nombre_sitio, std_reg FROM sitio_trabajo WHERE id_ai_sitio = :id AND std_reg = 1 LIMIT 1;

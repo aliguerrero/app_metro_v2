@@ -1,6 +1,0 @@
-Modulo: turnos_trabajo
-Operacion: listar
-
-Sentencias SQL:
-
-SELECT id_ai_turno, nombre_turno, std_reg FROM turno_trabajo WHERE std_reg = 1 ORDER BY id_ai_turno ASC;

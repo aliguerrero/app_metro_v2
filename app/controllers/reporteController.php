@@ -178,26 +178,15 @@ class reporteController extends mainModel
         }
 
         if ($f['id_user'] !== '' && $f['id_user'] !== 'Seleccionar') {
-            $where[] = "ot.id_user = :id_user";
+            $where[] = "ot.id_user_responsable = :id_user";
             $params[':id_user'] = $f['id_user'];
         }
 
         // Estado: se filtra por estado en detalle_orden (último estado o cualquiera)
         // Aquí lo aplico por "último estado" (más útil en listados).
-        $estadoJoin = "";
         if ($f['id_ai_estado'] !== '' && $f['id_ai_estado'] !== 'Seleccionar') {
-            $estadoJoin = "
-              INNER JOIN (
-                SELECT d1.n_ot, d1.id_ai_estado
-                FROM detalle_orden d1
-              INNER JOIN (
-                  SELECT n_ot, MAX(id_ai_detalle) AS max_id
-                  FROM detalle_orden
-                  GROUP BY n_ot
-                ) d2 ON d2.n_ot = d1.n_ot AND d2.max_id = d1.id_ai_detalle
-              ) lastd ON lastd.n_ot = ot.n_ot AND lastd.id_ai_estado = :id_ai_estado
-            ";
-            $params[':id_ai_estado'] = $f['id_ai_estado'];
+            $where[] = "ot.id_ai_estado = :id_ai_estado";
+            $params[':id_ai_estado'] = (int)$f['id_ai_estado'];
         }
 
         // Si no hay filtros, LIMIT para que no explote el preview
@@ -215,17 +204,11 @@ class reporteController extends mainModel
 
         $sqlOt = "
           SELECT
-            " . $this->columnasTablaSql('orden_trabajo', 'ot') . ",
-            a.nombre_area,
-            s.nombre_sitio,
-            COALESCE(emp_resp.nombre_empleado, u.id_empleado) AS responsable_nombre,
-            u.username AS responsable_username
-          FROM orden_trabajo ot
-          INNER JOIN area_trabajo a ON a.id_ai_area = ot.id_ai_area
-          INNER JOIN sitio_trabajo s ON s.id_ai_sitio = ot.id_ai_sitio
-          INNER JOIN user_system u ON u.id_empleado = ot.id_user
-          LEFT JOIN empleado emp_resp ON emp_resp.id_empleado = u.id_empleado
-          $estadoJoin
+            ot.*,
+            ot.nombre_estado AS estado_ot_nombre,
+            COALESCE(ot.empleado_responsable, ot.id_user_responsable) AS responsable_nombre,
+            ot.username_responsable AS responsable_username
+          FROM vw_ot_resumen ot
           WHERE " . implode(" AND ", $where) . "
           ORDER BY ot.fecha DESC, ot.n_ot DESC
           $limit
@@ -254,23 +237,20 @@ class reporteController extends mainModel
             // Detalles (N registros)
             $sqlDet = "
               SELECT
-                " . $this->columnasTablaSql('detalle_orden', 'd') . ",
-                t.nombre_turno,
-                e.nombre_estado,
-                e.color,
-                cco.nombre_miembro AS cco_nombre,
-                ccf.nombre_miembro AS ccf_nombre,
-                COALESCE(emp_tec.nombre_empleado, usr.id_empleado) AS tecnico_nombre,
-                usr.username AS tecnico_username
-              FROM detalle_orden d
-              INNER JOIN turno_trabajo t ON t.id_ai_turno = d.id_ai_turno
-              INNER JOIN estado_ot e ON e.id_ai_estado = d.id_ai_estado
-              INNER JOIN miembro cco ON cco.id_miembro = d.id_miembro_cco
-              INNER JOIN miembro ccf ON ccf.id_miembro = d.id_miembro_ccf
-              INNER JOIN user_system usr ON usr.id_empleado = d.id_user_act
-              LEFT JOIN empleado emp_tec ON emp_tec.id_empleado = usr.id_empleado
-              WHERE d.n_ot = :n_ot
-              ORDER BY d.fecha ASC, d.id_ai_detalle ASC
+                fecha_detalle AS fecha,
+                descripcion,
+                observacion,
+                cant_tec,
+                hora_inicio,
+                hora_fin,
+                nombre_turno,
+                miembro_cco_nombre AS cco_nombre,
+                miembro_ccf_nombre AS ccf_nombre,
+                COALESCE(NULLIF(usuario_act_nombre, ''), id_user_act) AS tecnico_nombre,
+                username_usuario_act AS tecnico_username
+              FROM vw_ot_detallada
+              WHERE n_ot = :n_ot
+              ORDER BY fecha_detalle ASC, id_ai_detalle ASC
             ";
             $detStmt = $this->ejecutarConsultaParams($sqlDet, [':n_ot' => $n_ot]);
             $detalles = $detStmt ? $detStmt->fetchAll(\PDO::FETCH_ASSOC) : [];
@@ -294,6 +274,7 @@ class reporteController extends mainModel
             $html .= '<div><b>Área:</b> ' . htmlspecialchars($ot['nombre_area']) . '</div>';
             $html .= '<div><b>Sitio:</b> ' . htmlspecialchars($ot['nombre_sitio']) . '</div>';
             $html .= '<div><b>Trabajo:</b> ' . htmlspecialchars($ot['nombre_trab']) . '</div>';
+            $html .= '<div><b>Estado:</b> ' . htmlspecialchars($ot['estado_ot_nombre'] ?? 'SIN ESTADO') . '</div>';
             $html .= '<div><b>Semana/Mes:</b> ' . htmlspecialchars((string)$ot['semana']) . ' / ' . htmlspecialchars((string)$ot['mes']) . '</div>';
             $html .= '<div><b>Responsable:</b> ' . htmlspecialchars($ot['responsable_nombre']) . ' (' . htmlspecialchars($ot['responsable_username']) . ')</div>';
             $html .= '</div>';
@@ -313,11 +294,12 @@ class reporteController extends mainModel
                     <th style="width:110px;">Técnico</th>
                     <th style="width:60px;">#Tec</th>
                     <th style="width:120px;">Horas</th>
-                    <th style="width:90px;">Estado</th>
                 </tr></thead><tbody>';
 
                 foreach ($detalles as $d) {
-                    $horas = "PRE: {$d['hora_ini_pre']}-{$d['hora_fin_pre']}<br>TRA: {$d['hora_ini_tra']}-{$d['hora_fin_tra']}<br>EJE: {$d['hora_ini_eje']}-{$d['hora_fin_eje']}";
+                    $horaInicio = $this->detalleHoraInicioValor($d);
+                    $horaFin = $this->detalleHoraFinValor($d);
+                    $horas = 'Inicio: ' . htmlspecialchars($horaInicio) . '<br>Fin: ' . htmlspecialchars($horaFin);
                     $html .= '<tr>';
                     $html .= '<td>' . htmlspecialchars(date('d/m/Y', strtotime($d['fecha']))) . '</td>';
                     $html .= '<td>' . htmlspecialchars((string)$d['descripcion']) . '<br><span class="muted">' . htmlspecialchars((string)($d['observacion'] ?? '')) . '</span></td>';
@@ -327,7 +309,6 @@ class reporteController extends mainModel
                     $html .= '<td>' . htmlspecialchars((string)$d['tecnico_nombre']) . '<br><span class="muted">(' . htmlspecialchars((string)$d['tecnico_username']) . ')</span></td>';
                     $html .= '<td style="text-align:center;">' . htmlspecialchars((string)$d['cant_tec']) . '</td>';
                     $html .= '<td>' . $horas . '</td>';
-                    $html .= '<td><span class="badge">' . htmlspecialchars((string)$d['nombre_estado']) . '</span></td>';
                     $html .= '</tr>';
                 }
 

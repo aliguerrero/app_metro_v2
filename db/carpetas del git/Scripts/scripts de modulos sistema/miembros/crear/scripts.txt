@@ -1,0 +1,45 @@
+Modulo: miembros
+Operacion: crear
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/miembroController.php -> obtenerEmpleadoActivo
+SELECT
+                e.id_empleado,
+                e.nacionalidad,
+                e.nombre_empleado,
+                COALESCE(NULLIF(e.telefono, ''), '') AS telefono,
+                COALESCE(NULLIF(e.correo, ''), '') AS correo
+             FROM empleado e
+             WHERE e.id_empleado = :id_empleado
+               AND e.std_reg = 1
+             LIMIT 1
+
+SQL [2] - app/controllers/miembroController.php -> obtenerMiembroPorEmpleado
+SELECT
+                m.id_ai_miembro,
+                m.id_miembro,
+                m.id_empleado,
+                m.nombre_miembro,
+                m.tipo_miembro,
+                m.std_reg
+             FROM miembro m
+             WHERE m.id_empleado = :id_empleado
+             LIMIT 1
+
+SQL [3] - app/controllers/miembroController.php -> siguienteCodigoMiembro
+SELECT COALESCE(MAX(CAST(SUBSTRING(id_miembro, 3) AS UNSIGNED)), 0)
+             FROM miembro
+             WHERE id_miembro REGEXP '^M-[0-9]+$'
+
+SQL [4] - app/controllers/miembroController.php -> registrarMiembroControlador
+UPDATE miembro
+                     SET id_empleado = :id_empleado,
+                         nombre_miembro = :nombre_miembro,
+                         tipo_miembro = :tipo_miembro,
+                         std_reg = 1
+                     WHERE id_miembro = :id_miembro
+
+SQL [5] - app/controllers/miembroController.php -> registrarMiembroControlador
+INSERT INTO miembro (id_miembro, id_empleado, nombre_miembro, tipo_miembro, std_reg) VALUES (:id_miembro, :id_empleado, :nombre_miembro, :tipo_miembro, :std_reg)

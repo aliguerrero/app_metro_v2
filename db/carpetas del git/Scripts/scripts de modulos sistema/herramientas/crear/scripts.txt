@@ -1,0 +1,14 @@
+Modulo: herramientas
+Operacion: crear
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/herramientaController.php -> registrarHerramientaControlador
+SELECT id_ai_herramienta, std_reg
+                 FROM herramienta
+                 WHERE TRIM(LOWER(nombre_herramienta)) = TRIM(LOWER(:nombre))
+                 LIMIT 1
+
+SQL [2] - app/controllers/herramientaController.php -> registrarHerramientaControlador
+INSERT INTO herramienta (nombre_herramienta, id_ai_categoria_herramienta, cantidad, estado, std_reg) VALUES (:Nombre, :Categoria, :Cant, :Estado, :std_reg)

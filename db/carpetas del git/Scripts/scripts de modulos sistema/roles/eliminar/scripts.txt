@@ -1,0 +1,17 @@
+Modulo: roles
+Operacion: eliminar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/rolCrud.php
+SELECT id FROM roles_permisos WHERE nombre_rol = :n LIMIT 1
+
+SQL [2] - app/controllers/rolCrud.php
+SELECT id FROM roles_permisos WHERE nombre_rol = :n ORDER BY id DESC LIMIT 1
+
+SQL [3] - app/controllers/rolCrud.php
+DELETE FROM roles_permisos WHERE id = :id
+
+SQL [4] - app/controllers/rolCrud.php
+SELECT {{ $ins->columnasTablaSql('roles_permisos') }} FROM roles_permisos WHERE id = :id LIMIT 1

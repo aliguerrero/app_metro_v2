@@ -1,9 +1,0 @@
-Modulo: categorias_herramienta
-Operacion: eliminar
-
-Sentencias SQL:
-
-- Desactivar categoria
-UPDATE categoria_herramienta
-SET std_reg = 0
-WHERE id_ai_categoria_herramienta = :id;

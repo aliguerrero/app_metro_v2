@@ -64,6 +64,15 @@ document.addEventListener('DOMContentLoaded', function () {
     reiniciarTabla(dir, canEdit, canDelete);
 });
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
 function reiniciarTabla(dir, canEdit, canDelete) {
     $.ajax({
         url: dir + 'app/controllers/cargarDatosBuscadorTools.php',
@@ -97,7 +106,7 @@ function renderToolsTable(dir, data, canEdit, canDelete, empty = false) {
     if (empty || !Array.isArray(data) || data.length === 0) {
         const fila = tbody.insertRow();
         fila.classList.add('align-middle');
-        fila.innerHTML = '<td class="text-center" colspan="10">No hay registros en el sistema</td>';
+        fila.innerHTML = '<td class="text-center" colspan="9">No hay registros en el sistema</td>';
         return;
     }
 
@@ -138,23 +147,31 @@ function renderToolsCards(dir, data, canEdit, canDelete, empty = false) {
 }
 
 function buildRowHerramienta(dir, contador, datos, canEdit, canDelete) {
-    const categoria = datos.nombre_categoria || 'SIN CATEGORIA';
+    const categoria = escapeHtml(datos.nombre_categoria || 'SIN CATEGORIA');
+    const id = escapeHtml(datos.id_ai_herramienta);
+    const nombre = escapeHtml(datos.nombre_herramienta || '');
 
-    const btnEdit = canEdit ? `
-    <td class="col-p">
-      <a href="#" title="Modificar" class="btn btn-warning text-dark"
-         data-bs-toggle="modal" data-bs-target="#ventanaModalModificarHerr" data-bs-id="${datos.id_ai_herramienta}">
-        <i class="bi bi-pencil text-white"></i>
-      </a>
-    </td>` : '<td class="col-p"></td>';
+    const buttons = [`
+    <button type="button" title="Ver ocupaciones" class="btn btn-info text-white js-tool-ocupaciones"
+        data-bs-toggle="modal" data-bs-target="#herramientaOcupacionesModal" data-id="${id}" data-nombre="${nombre}">
+      <i class="bi bi-diagram-3"></i>
+    </button>`];
 
-    const btnDel = canDelete ? `
-    <td class="col-p">
-      <button type="button" title="Eliminar" class="btn btn-danger"
-              onclick="eliminarHerramienta('${datos.id_ai_herramienta}','${dir}', ${canEdit}, ${canDelete})">
-        <i class="bi bi-trash" style="color:white;"></i>
-      </button>
-    </td>` : '<td class="col-p"></td>';
+    if (canEdit) {
+        buttons.push(`
+    <a href="#" title="Modificar" class="btn btn-warning text-dark"
+       data-bs-toggle="modal" data-bs-target="#ventanaModalModificarHerr" data-bs-id="${id}">
+      <i class="bi bi-pencil text-white"></i>
+    </a>`);
+    }
+
+    if (canDelete) {
+        buttons.push(`
+    <button type="button" title="Eliminar" class="btn btn-danger"
+            onclick="eliminarHerramienta('${id}','${dir}', ${canEdit}, ${canDelete})">
+      <i class="bi bi-trash" style="color:white;"></i>
+    </button>`);
+    }
 
     return `
     <td class="clearfix col-p"><div><b>${contador}</b></div></td>
@@ -163,43 +180,54 @@ function buildRowHerramienta(dir, contador, datos, canEdit, canDelete) {
         <img class="avatar-img" src="${dir}app/views/img/tools.png" alt="tool">
       </div>
     </td>
-    <td class="col-p"><div class="clearfix"><div><b>${datos.id_ai_herramienta}</b></div></div></td>
-    <td><div class="clearfix"><div><b>${datos.nombre_herramienta}</b></div></div></td>
+    <td class="col-p"><div class="clearfix"><div><b>${id}</b></div></div></td>
+    <td><div class="clearfix"><div><b>${nombre}</b></div></div></td>
     <td><div class="clearfix"><div>${categoria}</div></div></td>
     <td class="col-1"><div class="text-center"><b>${datos.cantidad}</b></div></td>
     <td class="col-1"><div class="text-center"><b>${datos.cantidad_disponible}</b></div></td>
     <td class="col-1"><div class="text-center"><b>${datos.herramienta_ocupada}</b></div></td>
-    ${btnEdit}
-    ${btnDel}
+    <td class="col-p text-center action-cell"><div class="tools-action-group" role="group" aria-label="Acciones de herramienta">${buttons.join('')}</div></td>
   `;
 }
 
 function toolCardHerramienta(dir, contador, datos, canEdit, canDelete) {
-    const categoria = datos.nombre_categoria || 'SIN CATEGORIA';
+    const categoria = escapeHtml(datos.nombre_categoria || 'SIN CATEGORIA');
+    const id = escapeHtml(datos.id_ai_herramienta);
+    const nombre = escapeHtml(datos.nombre_herramienta || '');
 
-    const btnEdit = canEdit ? `
+    const buttons = [`
+    <button type="button" class="btn btn-info text-white btn-sm js-tool-ocupaciones" title="Ver ocupaciones"
+            data-bs-toggle="modal" data-bs-target="#herramientaOcupacionesModal" data-id="${id}" data-nombre="${nombre}">
+      <i class="bi bi-diagram-3"></i>
+    </button>`];
+
+    if (canEdit) {
+        buttons.push(`
     <a href="#" title="Modificar" class="btn btn-warning text-dark btn-sm"
-       data-bs-toggle="modal" data-bs-target="#ventanaModalModificarHerr" data-bs-id="${datos.id_ai_herramienta}">
+       data-bs-toggle="modal" data-bs-target="#ventanaModalModificarHerr" data-bs-id="${id}">
       <i class="bi bi-pencil text-white"></i>
-    </a>` : '';
+    </a>`);
+    }
 
-    const btnDel = canDelete ? `
+    if (canDelete) {
+        buttons.push(`
     <button type="button" class="btn btn-danger btn-sm" title="Eliminar"
-            onclick="eliminarHerramienta('${datos.id_ai_herramienta}','${dir}', ${canEdit}, ${canDelete})">
+            onclick="eliminarHerramienta('${id}','${dir}', ${canEdit}, ${canDelete})">
       <i class="bi bi-trash"></i>
-    </button>` : '';
+    </button>`);
+    }
 
     return `
     <div class="tool-card">
       <div class="tool-card-head">
-        <span class="tool-code">#${contador} - Codigo: ${datos.id_ai_herramienta}</span>
+        <span class="tool-code">#${contador} - Codigo: ${id}</span>
         <span><b>Disp:</b> ${datos.cantidad_disponible}</span>
       </div>
 
       <div class="tool-body">
         <div class="tool-row">
           <div class="tool-label">Nombre</div>
-          <div class="tool-value">${datos.nombre_herramienta}</div>
+          <div class="tool-value">${nombre}</div>
         </div>
 
         <div class="tool-row">
@@ -218,8 +246,7 @@ function toolCardHerramienta(dir, contador, datos, canEdit, canDelete) {
         </div>
 
         <div class="tool-actions">
-          ${btnEdit}
-          ${btnDel}
+          <div class="tools-action-group" role="group" aria-label="Acciones de herramienta">${buttons.join('')}</div>
         </div>
       </div>
     </div>

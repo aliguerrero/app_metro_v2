@@ -19,7 +19,7 @@ register_shutdown_function(function () {
         echo json_encode([
             "ok" => false,
             "error" => "fatal_error",
-            "msg" => "Ocurrió un problema interno. Intenta nuevamente.",
+            "msg" => "Ocurrio un problema interno. Intenta nuevamente.",
             "detail" => $err['message'],
             "file" => $err['file'],
             "line" => $err['line'],
@@ -50,7 +50,7 @@ function requirePerm(string $permKey): void
 {
     $perms = $_SESSION['permisos'] ?? [];
     if (empty($perms[$permKey]) || (int)$perms[$permKey] !== 1) {
-        fail("permiso_denegado", "No tienes permisos para realizar esta acción.", 403);
+        fail("permiso_denegado", "No tienes permisos para realizar esta accion.", 403);
     }
 }
 
@@ -60,7 +60,7 @@ function requireAnyPerm(array $permKeys): void
     foreach ($permKeys as $k) {
         if (!empty($perms[$k]) && (int)$perms[$k] === 1) return;
     }
-    fail("permiso_denegado", "No tienes permisos para realizar esta acción.", 403);
+    fail("permiso_denegado", "No tienes permisos para realizar esta accion.", 403);
 }
 
 function postv(string $k, string $default = ''): string
@@ -95,8 +95,8 @@ function isDigits(string $v): bool
 }
 
 /**
- * Código OT: permite letras UNICODE (Ñ/acentos), números, guion y underscore.
- * Ej: VF-SEÑ-01
+ * Codigo OT: permite letras UNICODE (N/acentos), numeros, guion y underscore.
+ * Ej: VF-SEN-01
  */
 function isOtCode(string $v): bool
 {
@@ -104,7 +104,7 @@ function isOtCode(string $v): bool
 }
 
 /**
- * IDs tipo miembro (M-001), etc: letras unicode + números + guion/underscore.
+ * IDs tipo miembro (M-001), etc: letras unicode + numeros + guion/underscore.
  */
 function isIdLike(string $v, int $maxLen = 30): bool
 {
@@ -148,6 +148,61 @@ function existsDetalle(mainModel $m, string $pk, string $codigo, int $idDet, ?st
     return $st && $st->rowCount() > 0;
 }
 
+function otEstaFinalizada(mainModel $m, string $codigo): bool
+{
+    $select = ["n_ot"];
+    if (columnExists($m, 'orden_trabajo', 'ot_finalizada')) {
+        $select[] = "COALESCE(ot_finalizada, 0) AS ot_finalizada";
+    }
+    if (columnExists($m, 'orden_trabajo', 'id_ai_estado')) {
+        $select[] = "id_ai_estado";
+    }
+
+    $st = $m->ejecutarConsultaConParametros(
+        "SELECT " . implode(', ', $select) . "
+         FROM orden_trabajo
+         WHERE n_ot = :not
+           AND std_reg = 1
+         LIMIT 1",
+        [':not' => $codigo]
+    );
+
+    if (!$st || $st->rowCount() === 0) {
+        return false;
+    }
+
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+    if ((int)($row['ot_finalizada'] ?? 0) === 1) {
+        return true;
+    }
+
+    if (!isset($row['id_ai_estado'])) {
+        return false;
+    }
+
+    return $m->estadoOtEsFinalPorId((int)$row['id_ai_estado']);
+}
+
+function detalleHoraColumnMap(mainModel $m): array
+{
+    $start = [];
+    $end = [];
+
+    foreach (['hora_inicio', 'hora_ini_pre', 'hora_ini_tra', 'hora_ini_eje'] as $column) {
+        if (columnExists($m, 'detalle_orden', $column)) {
+            $start[] = $column;
+        }
+    }
+
+    foreach (['hora_fin', 'hora_fin_pre', 'hora_fin_tra', 'hora_fin_eje'] as $column) {
+        if (columnExists($m, 'detalle_orden', $column)) {
+            $end[] = $column;
+        }
+    }
+
+    return ['start' => $start, 'end' => $end];
+}
+
 $mainModel = new mainModel();
 
 try {
@@ -158,6 +213,11 @@ try {
     if (columnExists($mainModel, 'detalle_orden', 'id_ai_detalle')) $pk = 'id_ai_detalle';
     elseif (columnExists($mainModel, 'detalle_orden', 'id_detalle')) $pk = 'id_detalle';
     else fail("schema_pk_no_encontrada", "No se pudo identificar el ID del detalle. Contacta a soporte.", 500);
+
+    $horaColumns = detalleHoraColumnMap($mainModel);
+    if ($horaColumns['start'] === [] || $horaColumns['end'] === []) {
+        fail("schema_horas_no_encontrado", "No se encontraron columnas de hora configuradas para detalle_orden.", 500);
+    }
 
     // ==========================
     // VER / ELIMINAR
@@ -172,13 +232,13 @@ try {
             fail("parametros_invalidos", "No se pudo identificar el registro seleccionado. Vuelve a intentarlo.");
         }
         if (!isValidDateYmd($fecha)) {
-            fail("fecha_invalida", "La fecha no es válida. Selecciona una fecha con formato YYYY-MM-DD.");
+            fail("fecha_invalida", "La fecha no es valida. Selecciona una fecha con formato YYYY-MM-DD.");
         }
         if (!ctype_digit($id)) {
             fail("id_invalido", "No se pudo identificar el detalle seleccionado. Vuelve a seleccionarlo.");
         }
         if (!isOtCode($codigo)) {
-            fail("codigo_invalido", "El código de la O.T. no es válido. Vuelve a abrir la orden e intenta nuevamente.");
+            fail("codigo_invalido", "El codigo de la O.T. no es valido. Vuelve a abrir la orden e intenta nuevamente.");
         }
 
         if ($tipo === 'ver') {
@@ -197,13 +257,24 @@ try {
             );
 
             if ($stmt && $stmt->rowCount() > 0) {
-                jsonResponse(["ok" => true, "data" => $stmt->fetch(PDO::FETCH_ASSOC)]);
+                $data = $stmt->fetch(PDO::FETCH_ASSOC);
+                $data['hora_inicio'] = $mainModel->detalleHoraInicioValor($data);
+                $data['hora_fin'] = $mainModel->detalleHoraFinValor($data);
+                jsonResponse(["ok" => true, "data" => $data]);
             }
             fail("no_encontrado", "El registro ya no existe o fue eliminado.", 404);
         }
 
         // eliminar
         requireAnyPerm(['perm_ot_add_detalle', 'perm_ot_delete']);
+
+        if (otEstaFinalizada($mainModel, $codigo)) {
+            fail(
+                "ot_bloqueada",
+                "La O.T. esta bloqueada. Los detalles solo se pueden consultar.",
+                409
+            );
+        }
 
         $stmt = $mainModel->ejecutarConsultaConParametros(
             "DELETE FROM detalle_orden
@@ -221,15 +292,15 @@ try {
     // GUARDAR
     // ==========================
     if ($tipo !== 'guardar') {
-        fail("tipo_no_soportado", "La operación solicitada no es válida.");
+        fail("tipo_no_soportado", "La operacion solicitada no es valida.");
     }
 
     requireAnyPerm(['perm_ot_add_detalle']);
 
-    // Código OT (acepta que venga como codigo/n_ot/id)
+    // Codigo OT (acepta que venga como codigo/n_ot/id)
     $codigo = firstPost(['codigo', 'n_ot', 'id_ot', 'ot', 'id'], '');
 
-    // ID del detalle (NO uses 'id' aquí porque en tu UI suele ser el n_ot)
+    // ID del detalle (NO uses 'id' aqui porque en tu UI suele ser el n_ot)
     $idDet = firstPost(['id2', 'detalle_id', 'id_detalle', 'id_ai_detalle'], '');
 
     // fallback por si tu form manda el id detalle como "id" (solo si es num y el codigo viene por otro campo)
@@ -245,17 +316,12 @@ try {
     $desc   = firstPost(['desc', 'descripcion'], '');
     $cant   = firstPost(['cant', 'cant_tec'], '');
     $turno  = firstPost(['turno', 'id_ai_turno'], '');
-    $status = firstPost(['status', 'id_ai_estado', 'estado'], '');
     $cco    = firstPost(['cco', 'id_miembro_cco'], '');
     $ccf    = firstPost(['ccf', 'id_miembro_ccf'], '');
     $tec    = firstPost(['tec', 'id_user_act', 'id_tecnico'], '');
 
-    $prep_ini = firstPost(['prep_ini', 'hora_ini_pre'], '');
-    $prep_fin = firstPost(['prep_fin', 'hora_fin_pre'], '');
-    $tras_ini = firstPost(['tras_ini', 'hora_ini_tra'], '');
-    $tras_fin = firstPost(['tras_fin', 'hora_fin_tra'], '');
-    $ejec_ini = firstPost(['ejec_ini', 'hora_ini_eje'], '');
-    $ejec_fin = firstPost(['ejec_fin', 'hora_fin_eje'], '');
+    $horaInicio = firstPost(['hora_inicio', 'prep_ini', 'hora_ini_pre', 'tras_ini', 'hora_ini_tra', 'ejec_ini', 'hora_ini_eje'], '');
+    $horaFin = firstPost(['hora_fin', 'prep_fin', 'hora_fin_pre', 'tras_fin', 'hora_fin_tra', 'ejec_fin', 'hora_fin_eje'], '');
 
     $obs = postv('observacion', '');
 
@@ -265,34 +331,29 @@ try {
         'desc' => $desc,
         'cant' => $cant,
         'turno' => $turno,
-        'status' => $status,
         'cco' => $cco,
         'ccf' => $ccf,
         'tec' => $tec,
-        'prep_ini' => $prep_ini,
-        'prep_fin' => $prep_fin,
-        'tras_ini' => $tras_ini,
-        'tras_fin' => $tras_fin,
-        'ejec_ini' => $ejec_ini,
-        'ejec_fin' => $ejec_fin,
+        'hora_inicio' => $horaInicio,
+        'hora_fin' => $horaFin,
     ];
 
     $fieldLabels = [
-        'codigo'   => 'Código de la O.T.',
+        'codigo'   => 'Codigo de la O.T.',
         'fecha'    => 'Fecha',
-        'desc'     => 'Descripción',
+        'desc'     => 'Descripcion',
         'cant'     => 'Cantidad de operador(es)',
         'turno'    => 'Turno',
-        'status'   => 'Estado',
         'cco'      => 'CCO',
         'ccf'      => 'CCF',
-        'tec'      => 'Técnico',
-        'prep_ini' => 'Preparación (inicio)',
-        'prep_fin' => 'Preparación (fin)',
+        'hora_inicio' => 'Hora de inicio',
+        'hora_fin' => 'Hora de fin',
+        'prep_ini' => 'Preparacion (inicio)',
+        'prep_fin' => 'Preparacion (fin)',
         'tras_ini' => 'Traslado (inicio)',
         'tras_fin' => 'Traslado (fin)',
-        'ejec_ini' => 'Ejecución (inicio)',
-        'ejec_fin' => 'Ejecución (fin)',
+        'ejec_ini' => 'Ejecucion (inicio)',
+        'ejec_fin' => 'Ejecucion (fin)',
     ];
 
     $missing = [];
@@ -306,36 +367,38 @@ try {
 
     // Validaciones
     if (!isOtCode($codigo)) {
-        fail("codigo_invalido", "El código de la O.T. no es válido. Vuelve a abrir la orden e intenta nuevamente.");
+        fail("codigo_invalido", "El codigo de la O.T. no es valido. Vuelve a abrir la orden e intenta nuevamente.");
     }
     if (!isValidDateYmd($fecha)) {
-        fail("fecha_invalida", "La fecha no es válida. Selecciona una fecha con formato YYYY-MM-DD.");
+        fail("fecha_invalida", "La fecha no es valida. Selecciona una fecha con formato YYYY-MM-DD.");
+    }
+
+    if (otEstaFinalizada($mainModel, $codigo)) {
+        fail(
+            "ot_finalizada",
+            "La O.T. esta bloqueada. Solo se permite consultar los detalles existentes y generar el reporte.",
+            409
+        );
     }
 
     if ($idDet !== '' && !ctype_digit($idDet)) {
         fail("id_invalido", "No se pudo identificar el detalle a editar. Vuelve a seleccionarlo.");
     }
 
-    if (!isDigits($cant))   fail("cant_invalido", "La cantidad de operadores debe ser un número entero.");
-    if (!isDigits($turno))  fail("turno_invalido", "Selecciona un turno válido.");
-    if (!isDigits($status)) fail("status_invalido", "Selecciona un estado válido.");
+    if (!isDigits($cant))   fail("cant_invalido", "La cantidad de operadores debe ser un numero entero.");
+    if (!isDigits($turno))  fail("turno_invalido", "Selecciona un turno valido.");
+    if (!isIdLike($cco, 20)) fail("cco_invalido", "El CCO seleccionado no tiene un formato valido.");
+    if (!isIdLike($ccf, 20)) fail("ccf_invalido", "El CCF seleccionado no tiene un formato valido.");
 
-    if (!isIdLike($cco, 20)) fail("cco_invalido", "El CCO seleccionado no tiene un formato válido.");
-    if (!isIdLike($ccf, 20)) fail("ccf_invalido", "El CCF seleccionado no tiene un formato válido.");
-
-    // técnico: VARCHAR(30) (no int)
+    // tecnico: VARCHAR(30) (no int)
     if (!isIdLike($tec, 30)) {
-        fail("tec_invalido", "Selecciona un técnico válido.");
+        fail("tec_invalido", "Selecciona un tecnico valido.");
     }
     if (!existsUserId($mainModel, $tec)) {
-        fail("tec_no_existe", "El técnico seleccionado no existe en el sistema. Vuelve a seleccionarlo.");
+        fail("tec_no_existe", "El tecnico seleccionado no existe en el sistema. Vuelve a seleccionarlo.");
     }
 
-    if (
-        !isValidTimeStrict($prep_ini) || !isValidTimeStrict($prep_fin) ||
-        !isValidTimeStrict($tras_ini) || !isValidTimeStrict($tras_fin) ||
-        !isValidTimeStrict($ejec_ini) || !isValidTimeStrict($ejec_fin)
-    ) {
+    if (!isValidTimeStrict($horaInicio) || !isValidTimeStrict($horaFin)) {
         fail("hora_invalida", "Verifica las horas: deben estar completas y en formato HH:MM.");
     }
 
@@ -345,18 +408,68 @@ try {
         ':desc'   => $mainModel->limpiarCadena($desc),
         ':cant'   => (int)$cant,
         ':turno'  => (int)$turno,
-        ':estado' => (int)$status,
         ':cco'    => $cco,
         ':ccf'    => $ccf,
         ':tec'    => $tec, // <-- string
-        ':pre_i'  => $prep_ini,
-        ':pre_f'  => $prep_fin,
-        ':tra_i'  => $tras_ini,
-        ':tra_f'  => $tras_fin,
-        ':eje_i'  => $ejec_ini,
-        ':eje_f'  => $ejec_fin,
+        ':hora_inicio' => $horaInicio,
+        ':hora_fin' => $horaFin,
         ':obs'    => ($obs === '' ? null : $mainModel->limpiarCadena($obs)),
     ];
+
+    $updateAssignments = [
+        "descripcion    = :desc",
+        "cant_tec       = :cant",
+        "id_ai_turno    = :turno",
+        "id_miembro_cco = :cco",
+        "id_miembro_ccf = :ccf",
+        "id_user_act    = :tec",
+    ];
+
+    foreach ($horaColumns['start'] as $column) {
+        $updateAssignments[] = "{$column} = :hora_inicio";
+    }
+
+    foreach ($horaColumns['end'] as $column) {
+        $updateAssignments[] = "{$column} = :hora_fin";
+    }
+
+    $updateAssignments[] = "observacion    = :obs";
+    $updateSetSql = implode(",\n                 ", $updateAssignments);
+
+    $insertColumns = [
+        'n_ot',
+        'fecha',
+        'descripcion',
+        'cant_tec',
+        'id_ai_turno',
+        'id_miembro_cco',
+        'id_miembro_ccf',
+        'id_user_act',
+    ];
+
+    $insertMarkers = [
+        ':not',
+        ':fecha',
+        ':desc',
+        ':cant',
+        ':turno',
+        ':cco',
+        ':ccf',
+        ':tec',
+    ];
+
+    foreach ($horaColumns['start'] as $column) {
+        $insertColumns[] = $column;
+        $insertMarkers[] = ':hora_inicio';
+    }
+
+    foreach ($horaColumns['end'] as $column) {
+        $insertColumns[] = $column;
+        $insertMarkers[] = ':hora_fin';
+    }
+
+    $insertColumns[] = 'observacion';
+    $insertMarkers[] = ':obs';
 
     // ==========================
     // UPDATE
@@ -367,20 +480,7 @@ try {
         // 1) update estricto (n_ot + fecha + pk)
         $st = $mainModel->ejecutarConsultaConParametros(
             "UPDATE detalle_orden
-             SET descripcion    = :desc,
-                 cant_tec       = :cant,
-                 id_ai_turno    = :turno,
-                 id_ai_estado   = :estado,
-                 id_miembro_cco = :cco,
-                 id_miembro_ccf = :ccf,
-                 id_user_act    = :tec,
-                 hora_ini_pre   = :pre_i,
-                 hora_fin_pre   = :pre_f,
-                 hora_ini_tra   = :tra_i,
-                 hora_fin_tra   = :tra_f,
-                 hora_ini_eje   = :eje_i,
-                 hora_fin_eje   = :eje_f,
-                 observacion    = :obs
+             SET {$updateSetSql}
              WHERE n_ot = :not
                AND fecha = :fecha
                AND $pk = :id",
@@ -399,20 +499,7 @@ try {
             $st2 = $mainModel->ejecutarConsultaConParametros(
                 "UPDATE detalle_orden
                  SET fecha          = :fecha,
-                     descripcion    = :desc,
-                     cant_tec       = :cant,
-                     id_ai_turno    = :turno,
-                     id_ai_estado   = :estado,
-                     id_miembro_cco = :cco,
-                     id_miembro_ccf = :ccf,
-                     id_user_act    = :tec,
-                     hora_ini_pre   = :pre_i,
-                     hora_fin_pre   = :pre_f,
-                     hora_ini_tra   = :tra_i,
-                     hora_fin_tra   = :tra_f,
-                     hora_ini_eje   = :eje_i,
-                     hora_fin_eje   = :eje_f,
-                     observacion    = :obs
+                     {$updateSetSql}
                  WHERE n_ot = :not
                    AND $pk = :id",
                 $params + [':id' => $idInt]
@@ -437,26 +524,35 @@ try {
     // ==========================
     // INSERT
     // ==========================
-    $st = $mainModel->ejecutarConsultaConParametros(
-        "INSERT INTO detalle_orden
-          (n_ot, fecha, descripcion, cant_tec, id_ai_turno, id_ai_estado,
-           id_miembro_cco, id_miembro_ccf, id_user_act,
-           hora_ini_pre, hora_fin_pre, hora_ini_tra, hora_fin_tra, hora_ini_eje, hora_fin_eje,
-           observacion)
-         VALUES
-          (:not, :fecha, :desc, :cant, :turno, :estado,
-           :cco, :ccf, :tec,
-           :pre_i, :pre_f, :tra_i, :tra_f, :eje_i, :eje_f,
-           :obs)",
+    $result = $mainModel->ejecutarProcedimientoFila(
+        "CALL sp_ot_agregar_detalle(
+            :not,
+            :fecha,
+            :desc,
+            :turno,
+            :cco,
+            :tec,
+            :ccf,
+            :cant,
+            :hora_inicio,
+            :hora_fin,
+            :obs
+        )",
         $params
     );
 
-    jsonResponse(["ok" => ($st !== false), "modo" => "insert"]);
+    jsonResponse([
+        "ok" => ($result !== null),
+        "modo" => "insert",
+        "data" => $result
+    ]);
 } catch (Throwable $e) {
     jsonResponse([
         "ok" => false,
         "error" => "exception",
-        "msg" => "No se pudo guardar la información. Intenta nuevamente.",
+        "msg" => "No se pudo guardar la informacion. Intenta nuevamente.",
         "detail" => $e->getMessage()
     ], 500);
 }
+
+

@@ -1,6 +1,0 @@
-Modulo: roles
-Operacion: buscar
-
-Sentencias SQL:
-
-SELECT id, nombre_rol, perm_usuarios_view, perm_usuarios_add, perm_usuarios_edit, perm_usuarios_delete, perm_herramienta_view, perm_herramienta_add, perm_herramienta_edit, perm_herramienta_delete, perm_miembro_view, perm_miembro_add, perm_miembro_edit, perm_miembro_delete, perm_ot_view, perm_ot_add, perm_ot_edit, perm_ot_delete, perm_ot_add_detalle, perm_ot_generar_reporte, perm_ot_add_herramienta FROM roles_permisos WHERE id = :id LIMIT 1;

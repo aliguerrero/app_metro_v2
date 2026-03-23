@@ -1,51 +1,46 @@
-/* cargarVentanaDetalle.js (PRODUCCIÓN + ALERTAS SWEETALERT2)
-   SOLO cargarDatosDetalle.php:
-   - ver     : tipo=ver (id, fecha, codigo)
-   - eliminar: tipo=eliminar (id, fecha, codigo)
-   - guardar : tipo=guardar (codigo, id(opcional=id_ai_detalle), fecha, ...campos)
-
-   ✅ Incluye:
-   - Validación FRONT (obligatorios excepto observación) con SweetAlert (lista de campos faltantes)
-   - Manejo de respuesta BACK con formato del sistema:
-       { ok, tipo:'simple', titulo, texto, icono, missing_labels? }
-     -> Se muestra SIN “Error 400/500” (eso queda en consola)
-*/
-
+﻿/* cargarVentanaDetalle.js */
 document.addEventListener('DOMContentLoaded', function () {
   const dir = document.getElementById('url') ? document.getElementById('url').value : '';
-  const modal = document.getElementById('detallesOt');
-  if (!modal) return;
+  const listModal = document.getElementById('detallesOt');
+  const formModalEl = document.getElementById('detalleOtFormModal');
+  const form = document.getElementById('formDetalleOt');
+
+  if (!listModal || !formModalEl || !form) return;
 
   const btnRecargarDetalle = document.getElementById('btnRecargarDetalle');
-  const form = document.getElementById('formDetalleOt');
+  const btnCrear = document.getElementById('btnNuevoDetalleOt');
+  const btnGuardar = document.getElementById('btnGuardarDetalleOt');
+  const lockNotice = document.getElementById('detalleOtLockNotice');
+  const metaOt = document.getElementById('metaOt');
+  const modoEdicionLabel = document.getElementById('modoEdicionLabel');
+  const formTitle = document.getElementById('detalleOtFormModalLabel');
+  const detalleFormCodigoOt = document.getElementById('detalleFormCodigoOt');
+  const detalleFormMeta = document.getElementById('detalleFormMeta');
 
   const urlCargarOt = dir + 'app/controllers/cargarDatosOt.php';
   const urlCargarDetalles = dir + 'app/controllers/cargarDatosDetalles.php';
   const urlDetalleAccion = dir + 'app/controllers/cargarDatosDetalle.php';
 
   let submitInFlight = false;
+  let formMode = 'new';
 
-  // =========================
-  // Helpers
-  // =========================
   const FIELD_LABELS = {
-    codigo: 'Código O.T.',
+    codigo: 'Codigo O.T.',
     fecha: 'Fecha',
-    desc: 'Descripción',
+    desc: 'Descripcion',
     cant: 'Cantidad de operadores',
     turno: 'Turno',
-    status: 'Estado',
     cco: 'CCO',
     ccf: 'CCF',
-    tec: 'Técnico',
-    prep_ini: 'Preparación (Inicio)',
-    prep_fin: 'Preparación (Fin)',
-    tras_ini: 'Traslado (Inicio)',
-    tras_fin: 'Traslado (Fin)',
-    ejec_ini: 'Ejecución (Inicio)',
-    ejec_fin: 'Ejecución (Fin)',
-    observacion: 'Observación'
+    tec: 'Tecnico',
+    hora_inicio: 'Hora de inicio',
+    hora_fin: 'Hora de fin',
+    observacion: 'Observacion'
   };
+
+  function getFormModalInstance() {
+    return bootstrap.Modal.getOrCreateInstance(formModalEl);
+  }
 
   function pick(root, ...selectors) {
     for (const s of selectors) {
@@ -57,7 +52,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function setVal(el, value, fallback = '') {
     if (!el) return;
-    el.value = (value ?? fallback);
+    el.value = value ?? fallback;
+  }
+
+  function getValue(sel) {
+    return String(pick(formModalEl, sel)?.value || '').trim();
   }
 
   function isYmd(v) {
@@ -74,12 +73,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function escapeAttr(str) {
-    return String(str ?? '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;');
+    return escapeHtml(str);
   }
 
   function unwrapList(payload) {
@@ -94,14 +88,96 @@ document.addEventListener('DOMContentLoaded', function () {
     return escapeHtml(String(txt || '')).replace(/\n/g, '<br>');
   }
 
+  function formatearFecha(fecha) {
+    if (!fecha) return '';
+    const partes = String(fecha).split('-');
+    if (partes.length !== 3) return fecha;
+    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+  }
+
+  function codigoOtActual() {
+    return (document.getElementById('codigoOt')?.textContent ?? '').trim();
+  }
+
+  function otActualFinalizada() {
+    return String(listModal.dataset.otFinalizada || '0') === '1';
+  }
+
+  function syncFormOtBadge() {
+    const codigo = codigoOtActual() || '-';
+    if (detalleFormCodigoOt) detalleFormCodigoOt.textContent = codigo;
+  }
+
+  function setFormReadonly(readonly) {
+    form.querySelectorAll('input, select, textarea').forEach((field) => {
+      if (field.type === 'hidden') return;
+      field.disabled = readonly;
+    });
+
+    if (btnGuardar) {
+      btnGuardar.disabled = readonly;
+      btnGuardar.classList.toggle('d-none', readonly);
+    }
+  }
+
+  function updateFormChrome(mode, readonly) {
+    formMode = mode;
+    syncFormOtBadge();
+
+    if (formTitle) {
+      formTitle.textContent = mode === 'view'
+        ? 'Ver detalle'
+        : (mode === 'edit' ? 'Editar detalle' : 'Registrar detalle');
+    }
+
+    if (modoEdicionLabel) {
+      modoEdicionLabel.textContent = readonly
+        ? 'Consulta'
+        : (mode === 'edit' ? 'Edicion' : 'Nuevo');
+    }
+
+    if (detalleFormMeta) {
+      detalleFormMeta.textContent = readonly
+        ? 'Consulta del detalle seleccionado. Los campos estan en solo lectura.'
+        : (mode === 'edit'
+          ? 'Actualiza el detalle seleccionado.'
+          : 'Completa la informacion del detalle.');
+    }
+
+    setFormReadonly(readonly);
+  }
+
+  function setOtFinalizadaState(finalizada) {
+    const locked = !!finalizada;
+    listModal.dataset.otFinalizada = locked ? '1' : '0';
+
+    if (lockNotice) {
+      lockNotice.classList.toggle('d-none', !locked);
+    }
+
+    if (btnCrear) {
+      btnCrear.disabled = locked;
+      btnCrear.classList.toggle('disabled', locked);
+      btnCrear.title = locked ? 'La O.T. esta bloqueada' : 'Registrar nuevo detalle';
+    }
+
+    if (metaOt) {
+      metaOt.textContent = locked
+        ? 'O.T. bloqueada. Solo se permite consultar los detalles existentes.'
+        : '';
+    }
+
+    if (locked && bootstrap.Modal.getInstance(formModalEl)) {
+      updateFormChrome('view', true);
+    }
+  }
+
   function showAlertFromBackend(payload, fallback = {}) {
-    // Handler global (si existe)
     if (typeof alertas_ajax === 'function' && payload && payload.tipo) {
       alertas_ajax(payload);
       return;
     }
 
-    // Formato del sistema
     if (payload && payload.tipo === 'simple') {
       if (Array.isArray(payload.missing_labels) && payload.missing_labels.length) {
         const items = payload.missing_labels.map(x => `<li>${escapeHtml(x)}</li>`).join('');
@@ -124,11 +200,10 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
 
-    // Respuestas técnicas
     const msg = payload?.texto || payload?.message || fallback.text || 'Intenta nuevamente.';
     return Swal.fire({
       icon: fallback.icon || 'error',
-      title: fallback.title || 'No se pudo completar la acción',
+      title: fallback.title || 'No se pudo completar la accion',
       html: toHtmlMultiline(msg)
     });
   }
@@ -144,17 +219,24 @@ document.addEventListener('DOMContentLoaded', function () {
         <div style="text-align:left">
           <p style="margin-bottom:8px">Completa los siguientes campos antes de guardar:</p>
           <ul style="margin:0; padding-left:18px;">${items}</ul>
-          <p style="margin-top:10px; margin-bottom:0"><b>Observación</b> es el único campo opcional.</p>
+          <p style="margin-top:10px; margin-bottom:0"><b>Observacion</b> es el unico campo opcional.</p>
         </div>
       `
     });
   }
 
-  function getValue(sel) {
-    return String(pick(form, sel)?.value || '').trim();
-  }
+  function validateBeforeSave() {
+    if (otActualFinalizada()) {
+      Swal.fire({
+        icon: 'info',
+        title: 'O.T. bloqueada',
+        text: 'La O.T. esta bloqueada. Solo puedes consultar los detalles existentes.'
+      });
+      return { ok: false };
+    }
 
-  function validateBeforeSave({ modoTxt, codigo, idDetalle }) {
+    const codigo = String(pick(formModalEl, '#id', '[name="codigo"]')?.value || '').trim();
+    const idDetalle = String(pick(formModalEl, '#id2', '[name="id"]')?.value || '').trim();
     const missing = [];
 
     if (!codigo) missing.push('codigo');
@@ -162,40 +244,34 @@ document.addEventListener('DOMContentLoaded', function () {
     const fecha = getValue('#fecha');
     if (!fecha) missing.push('fecha');
     else if (!isYmd(fecha)) {
-      Swal.fire({ icon: 'warning', title: 'Fecha inválida', text: 'Selecciona una fecha válida.' });
-      return { ok: false, missing: null };
+      Swal.fire({ icon: 'warning', title: 'Fecha invalida', text: 'Selecciona una fecha valida.' });
+      return { ok: false };
     }
 
     if (!getValue('#desc')) missing.push('desc');
     if (!getValue('#cant')) missing.push('cant');
     if (!getValue('#turno')) missing.push('turno');
-    if (!getValue('#status')) missing.push('status');
     if (!getValue('#cco')) missing.push('cco');
     if (!getValue('#ccf')) missing.push('ccf');
     if (!getValue('#tec')) missing.push('tec');
+    if (!getValue('#hora_inicio')) missing.push('hora_inicio');
+    if (!getValue('#hora_fin')) missing.push('hora_fin');
 
-    if (!getValue('#prep_ini')) missing.push('prep_ini');
-    if (!getValue('#prep_fin')) missing.push('prep_fin');
-    if (!getValue('#tras_ini')) missing.push('tras_ini');
-    if (!getValue('#tras_fin')) missing.push('tras_fin');
-    if (!getValue('#ejec_ini')) missing.push('ejec_ini');
-    if (!getValue('#ejec_fin')) missing.push('ejec_fin');
-
-    if (modoTxt === 'Edición' && !idDetalle) {
+    if (formMode === 'edit' && !idDetalle) {
       Swal.fire({
         icon: 'error',
         title: 'No se pudo actualizar',
-        text: 'No se identificó el detalle a modificar. Vuelve a seleccionar el registro desde la lista.'
+        text: 'No se identifico el detalle a modificar. Seleccionalo nuevamente desde la lista.'
       });
-      return { ok: false, missing: null };
+      return { ok: false };
     }
 
     if (missing.length) {
       showMissingFieldsAlert(missing);
-      return { ok: false, missing };
+      return { ok: false };
     }
 
-    return { ok: true, missing: [] };
+    return { ok: true, codigo, idDetalle };
   }
 
   async function fetchJsonSafe(url, bodyParams) {
@@ -213,14 +289,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const text = await res.text();
 
     if (!text) {
-      console.error('Respuesta vacía', { url, status: res.status });
+      console.error('Respuesta vacia', { url, status: res.status });
       return {
         res,
         payload: {
           ok: false,
           tipo: 'simple',
           titulo: 'Sin respuesta del servidor',
-          texto: 'No se recibió respuesta. Intenta nuevamente.',
+          texto: 'No se recibio respuesta. Intenta nuevamente.',
           icono: 'error'
         }
       };
@@ -236,8 +312,8 @@ document.addEventListener('DOMContentLoaded', function () {
         payload: {
           ok: false,
           tipo: 'simple',
-          titulo: 'Respuesta inválida',
-          texto: 'El servidor devolvió una respuesta inesperada. Intenta nuevamente o contacta al administrador.',
+          titulo: 'Respuesta invalida',
+          texto: 'El servidor devolvio una respuesta inesperada. Intenta nuevamente o contacta al administrador.',
           icono: 'error'
         }
       };
@@ -247,82 +323,188 @@ document.addEventListener('DOMContentLoaded', function () {
     return { res, payload };
   }
 
-  // =========================
-  // Render lista (tabla/cards)
-  // =========================
+  function resetFormFields() {
+    setVal(pick(formModalEl, '#id2', '[name="id"]'), '');
+
+    ['fecha', 'desc', 'cant', 'hora_inicio', 'hora_fin', 'observacion']
+      .forEach(id => setVal(pick(formModalEl, `#${id}`), ''));
+
+    ['turno', 'tec', 'cco', 'ccf']
+      .forEach(id => setVal(pick(formModalEl, `#${id}`, `[name="${id}"]`), ''));
+  }
+
+  function fillDetail(detail, fallback) {
+    const realId = String(detail?.id_ai_detalle ?? detail?.id_detalle ?? detail?.id ?? fallback.id);
+
+    setVal(pick(formModalEl, '#id', '[name="codigo"]'), detail.n_ot ?? fallback.codigo, '');
+    setVal(pick(formModalEl, '#id2', '[name="id"]'), realId, '');
+    setVal(pick(formModalEl, '#fecha', '[name="fecha"]'), detail.fecha ?? fallback.fecha, '');
+    setVal(pick(formModalEl, '#desc', '[name="desc"]'), detail.descripcion ?? '', '');
+    setVal(pick(formModalEl, '#cant', '[name="cant"]'), detail.cant_tec ?? '', '');
+    setVal(pick(formModalEl, '#turno', '[name="turno"]'), detail.id_ai_turno ?? '', '');
+    setVal(pick(formModalEl, '#cco', '[name="cco"]'), detail.id_miembro_cco ?? '', '');
+    setVal(pick(formModalEl, '#ccf', '[name="ccf"]'), detail.id_miembro_ccf ?? '', '');
+    setVal(pick(formModalEl, '#tec', '[name="tec"]'), detail.id_user_act ?? '', '');
+
+    const horaInicio = detail.hora_inicio ?? detail.hora_ini_pre ?? detail.hora_ini_tra ?? detail.hora_ini_eje ?? '';
+    const horaFin = detail.hora_fin ?? detail.hora_fin_eje ?? detail.hora_fin_tra ?? detail.hora_fin_pre ?? '';
+
+    setVal(pick(formModalEl, '#hora_inicio', '[name="hora_inicio"]'), horaInicio, '');
+    setVal(pick(formModalEl, '#hora_fin', '[name="hora_fin"]'), horaFin, '');
+    setVal(pick(formModalEl, '#observacion', '[name="observacion"]'), detail.observacion ?? '', '');
+  }
+
+  async function cargarDetalle(id, fecha, codigo) {
+    if (!id || !fecha || !codigo || !isYmd(fecha)) {
+      return null;
+    }
+
+    const body = new URLSearchParams();
+    body.append('tipo', 'ver');
+    body.append('id', id);
+    body.append('fecha', fecha);
+    body.append('codigo', codigo);
+
+    const { res, payload } = await fetchJsonSafe(urlDetalleAccion, body);
+    if (!res.ok) {
+      showAlertFromBackend(payload, { title: 'No se pudo cargar el detalle', text: 'Intenta nuevamente.' });
+      return null;
+    }
+
+    return payload?.data ?? payload;
+  }
+
+  async function abrirFormularioDetalle(mode, detailRef = null) {
+    const codigo = detailRef?.codigo || codigoOtActual();
+    if (!codigo) return;
+
+    if (mode === 'new' && otActualFinalizada()) {
+      Swal.fire({
+        icon: 'info',
+        title: 'O.T. bloqueada',
+        text: 'La O.T. esta bloqueada. No se pueden registrar nuevos detalles.'
+      });
+      return;
+    }
+
+    resetFormFields();
+    setVal(pick(formModalEl, '#id', '[name="codigo"]'), codigo, '');
+    syncFormOtBadge();
+
+    if (mode === 'new') {
+      updateFormChrome('new', false);
+      getFormModalInstance().show();
+      setTimeout(() => pick(formModalEl, '#fecha')?.focus(), 150);
+      return;
+    }
+
+    const detail = await cargarDetalle(detailRef.id, detailRef.fecha, codigo);
+    if (!detail) return;
+
+    fillDetail(detail, detailRef);
+
+    const readonly = mode === 'view' || otActualFinalizada();
+    updateFormChrome(mode, readonly);
+    getFormModalInstance().show();
+    setTimeout(() => pick(formModalEl, '#fecha')?.focus(), 150);
+  }
+
+  function buildActionButton(kind, attrs, disabled = false) {
+    const data = `data-id="${escapeAttr(attrs.id)}" data-fecha="${escapeAttr(attrs.fecha)}" data-ot="${escapeAttr(attrs.ot)}"`;
+
+    if (kind === 'view') {
+      return `
+        <button type="button" class="btn btn-info text-white btn-sm js-view-detalle" title="Ver" ${data}>
+          <i class="bi bi-eye"></i>
+        </button>
+      `;
+    }
+
+    if (kind === 'edit') {
+      if (disabled) {
+        return `
+          <button type="button" class="btn btn-secondary btn-sm" title="O.T. bloqueada" disabled>
+            <i class="bi bi-pencil"></i>
+          </button>
+        `;
+      }
+
+      return `
+        <button type="button" class="btn btn-warning text-dark btn-sm js-edit-detalle" title="Editar" ${data}>
+          <i class="bi bi-pencil text-white"></i>
+        </button>
+      `;
+    }
+
+    if (disabled) {
+      return `
+        <button type="button" class="btn btn-secondary btn-sm" title="O.T. bloqueada" disabled>
+          <i class="bi bi-trash"></i>
+        </button>
+      `;
+    }
+
+    return `
+      <button type="button" class="btn btn-danger btn-sm js-del-detalle" title="Eliminar" ${data}>
+        <i class="bi bi-trash"></i>
+      </button>
+    `;
+  }
+
   function buildRowDetalle(contador, d) {
     const fechaRaw = d.fecha ?? '';
-    const fecha = fechaRaw ? formatearFecha(fechaRaw) : '—';
-    const descripcion = escapeHtml(d.descripcion ?? d.desc ?? '—');
-    const color = d.color ?? '#6B7280';
-    const estado = d.nombre_estado ?? '—';
-
-    const idDetalle = d.id_detalle ?? d.id_ai_detalle ?? d.id ?? '';
-    const n_ot = d.n_ot ?? (document.getElementById('codigoOt')?.textContent ?? '').trim();
+    const fecha = fechaRaw ? formatearFecha(fechaRaw) : '-';
+    const descripcion = escapeHtml(d.descripcion ?? d.desc ?? '-');
+    const tecnico = escapeHtml(d.user ?? d.nombre_empleado ?? d.id_user_act ?? '-');
+    const attrs = {
+      id: d.id_detalle ?? d.id_ai_detalle ?? d.id ?? '',
+      fecha: fechaRaw,
+      ot: d.n_ot ?? codigoOtActual()
+    };
+    const bloqueada = otActualFinalizada();
 
     return `
       <td class="col-p"><b>${contador}</b></td>
-      <td class="col-p">
-        <span style="display:block;border:1px solid #fff;border-radius:50em;width:1.7333333333rem;height:1.7333333333rem;background-color:${color};"
-          title="${escapeHtml(estado)}"></span>
-      </td>
       <td class="col-1"><b>${fecha}</b></td>
       <td class="col-5"><b>${descripcion}</b></td>
-
-      <td class="col-p text-center">
-        <button type="button" class="btn btn-warning text-dark btn-sm js-ver-detalle" title="Ver/Editar"
-          data-id="${escapeAttr(idDetalle)}"
-          data-fecha="${escapeAttr(fechaRaw)}"
-          data-ot="${escapeAttr(n_ot)}">
-          <i class="bi bi-pencil text-white"></i>
-        </button>
-      </td>
-
-      <td class="col-p text-center">
-        <button type="button" class="btn btn-danger btn-sm js-del-detalle" title="Eliminar"
-          data-id="${escapeAttr(idDetalle)}"
-          data-fecha="${escapeAttr(fechaRaw)}"
-          data-ot="${escapeAttr(n_ot)}">
-          <i class="bi bi-trash"></i>
-        </button>
-      </td>
+      <td class="col-2">${tecnico}</td>
+      <td class="col-p text-center">${buildActionButton('view', attrs)}</td>
+      <td class="col-p text-center">${buildActionButton('edit', attrs, bloqueada)}</td>
+      <td class="col-p text-center">${buildActionButton('delete', attrs, bloqueada)}</td>
     `;
   }
 
   function buildCardDetalle(contador, d) {
     const fechaRaw = d.fecha ?? '';
-    const fecha = fechaRaw ? formatearFecha(fechaRaw) : '—';
-    const descripcion = escapeHtml(d.descripcion ?? d.desc ?? '—');
-    const color = d.color ?? '#6B7280';
-    const estado = d.nombre_estado ?? '—';
-
-    const idDetalle = d.id_detalle ?? d.id_ai_detalle ?? d.id ?? '';
-    const n_ot = d.n_ot ?? (document.getElementById('codigoOt')?.textContent ?? '').trim();
+    const fecha = fechaRaw ? formatearFecha(fechaRaw) : '-';
+    const descripcion = escapeHtml(d.descripcion ?? d.desc ?? '-');
+    const tecnico = escapeHtml(d.user ?? d.nombre_empleado ?? d.id_user_act ?? '-');
+    const attrs = {
+      id: d.id_detalle ?? d.id_ai_detalle ?? d.id ?? '',
+      fecha: fechaRaw,
+      ot: d.n_ot ?? codigoOtActual()
+    };
+    const bloqueada = otActualFinalizada();
 
     return `
       <div class="tool-card">
         <div class="tool-card-head">
-          <span class="tool-code">#${contador} • ${fecha}</span>
-          <span class="badge" style="background:${color};">${escapeHtml(estado)}</span>
+          <span class="tool-code">#${contador} - ${fecha}</span>
+          <span class="badge bg-light text-dark">Detalle</span>
         </div>
         <div class="tool-body">
           <div class="tool-row">
-            <div class="tool-label">Descripción</div>
+            <div class="tool-label">Descripcion</div>
             <div class="tool-value">${descripcion}</div>
           </div>
+          <div class="tool-row">
+            <div class="tool-label">Tecnico</div>
+            <div class="tool-value">${tecnico}</div>
+          </div>
           <div class="tool-actions">
-            <button type="button" class="btn btn-warning text-dark btn-sm js-ver-detalle" title="Ver/Editar"
-              data-id="${escapeAttr(idDetalle)}"
-              data-fecha="${escapeAttr(fechaRaw)}"
-              data-ot="${escapeAttr(n_ot)}">
-              <i class="bi bi-pencil text-white"></i>
-            </button>
-            <button type="button" class="btn btn-danger btn-sm js-del-detalle" title="Eliminar"
-              data-id="${escapeAttr(idDetalle)}"
-              data-fecha="${escapeAttr(fechaRaw)}"
-              data-ot="${escapeAttr(n_ot)}">
-              <i class="bi bi-trash"></i>
-            </button>
+            ${buildActionButton('view', attrs)}
+            ${buildActionButton('edit', attrs, bloqueada)}
+            ${buildActionButton('delete', attrs, bloqueada)}
           </div>
         </div>
       </div>
@@ -337,12 +519,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     tbody.innerHTML = '';
     if (empty || !Array.isArray(data) || data.length === 0) {
-      tbody.innerHTML = `<tr class="align-middle"><td class="text-center" colspan="6">No hay registros en el sistema</td></tr>`;
+      tbody.innerHTML = '<tr class="align-middle"><td class="text-center" colspan="7">No hay registros en el sistema</td></tr>';
       return;
     }
 
     let c = 1;
-    data.forEach(d => {
+    data.forEach((d) => {
       const tr = document.createElement('tr');
       tr.className = 'align-middle';
       tr.innerHTML = buildRowDetalle(c++, d);
@@ -355,7 +537,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!wrap) return;
 
     if (empty || !Array.isArray(data) || data.length === 0) {
-      wrap.innerHTML = `<div class="tool-card"><div class="tool-card-head"><span class="tool-code">Sin registros</span><span>—</span></div></div>`;
+      wrap.innerHTML = '<div class="tool-card"><div class="tool-card-head"><span class="tool-code">Sin registros</span><span>-</span></div></div>';
       return;
     }
 
@@ -364,7 +546,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function reiniciarTabla() {
-    const codigoOt = (document.getElementById('codigoOt')?.textContent ?? '').trim();
+    const codigoOt = codigoOtActual();
     if (!codigoOt) {
       renderDetallesTable([], true);
       renderDetallesCards([], true);
@@ -393,179 +575,164 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  // =========================
-  // Delegación: Ver/Eliminar
-  // =========================
-  modal.addEventListener('click', function (e) {
-    const ver = e.target.closest('.js-ver-detalle');
-    if (ver) {
-      verDetalles(ver.dataset.id || '', ver.dataset.fecha || '', ver.dataset.ot || '');
-      if (typeof enfocarFormularioDetalle === 'function') enfocarFormularioDetalle();
-      return;
-    }
-
-    const del = e.target.closest('.js-del-detalle');
-    if (del) {
-      eliminarDetalles(del.dataset.id || '', del.dataset.fecha || '', del.dataset.ot || '');
-      return;
-    }
-  });
-
-  // =========================
-  // Abrir modal: cargar OT + setear codigo (#id) y reset id2
-  // =========================
-  modal.addEventListener('show.bs.modal', function (event) {
-    const button = event.relatedTarget;
-    const idBtn = button ? button.getAttribute('data-bs-id') : null;
-    if (!idBtn) return;
-
-    const codigoOtEl = modal.querySelector('#codigoOt');
-    const nombreOtEl = modal.querySelector('#nombreOt');
-
-    const inputCodigo = modal.querySelector('#id');   // name="codigo"
-    const inputId2 = modal.querySelector('#id2');     // name="id" (id_detalle)
-
-    const fd = new FormData();
-    fd.append('id', idBtn);
-
-    fetch(urlCargarOt, { method: "POST", body: fd })
-      .then(r => r.json())
-      .then(payload => {
-        const data = payload?.data ?? payload;
-        if (!data) return;
-
-        if (codigoOtEl) codigoOtEl.textContent = data.n_ot ?? '';
-        if (nombreOtEl) nombreOtEl.textContent = data.nombre_trab ?? '';
-
-        setVal(inputCodigo, data.n_ot ?? '');
-        setVal(inputId2, ''); // nuevo
-
-        limpiarDetalles();
-      })
-      .catch(console.error);
-  });
-
-  modal.addEventListener('shown.bs.modal', reiniciarTabla);
-  if (btnRecargarDetalle) btnRecargarDetalle.addEventListener('click', reiniciarTabla);
-
-  modal.addEventListener('hidden.bs.modal', function () {
-    const c = modal.querySelector('#codigoOt');
-    if (c) c.textContent = '';
-    limpiarDetalles();
-    renderDetallesTable([], true);
-    renderDetallesCards([], true);
-  });
-
-  // =========================
-  // VER (tipo=ver)
-  // =========================
-  async function verDetalles(id, fecha, codigo) {
+  async function eliminarDetalles(id, fecha, codigo) {
     if (!id || !fecha || !codigo) return;
-    if (!isYmd(fecha)) return;
+
+    if (otActualFinalizada()) {
+      Swal.fire({
+        icon: 'info',
+        title: 'O.T. bloqueada',
+        text: 'La O.T. esta bloqueada. Los detalles solo se pueden consultar.'
+      });
+      return;
+    }
+
+    const r = await Swal.fire({
+      title: 'Eliminar detalle?',
+      text: 'Se eliminara el registro seleccionado.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Si, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!r.isConfirmed) return;
 
     const body = new URLSearchParams();
-    body.append('tipo', 'ver');
+    body.append('tipo', 'eliminar');
     body.append('id', id);
     body.append('fecha', fecha);
     body.append('codigo', codigo);
 
     const { res, payload } = await fetchJsonSafe(urlDetalleAccion, body);
-    if (!res.ok) {
-      showAlertFromBackend(payload, { title: 'No se pudo cargar el detalle', text: 'Intenta nuevamente.' });
+    if (!res.ok || payload?.ok === false) {
+      showAlertFromBackend(payload, {
+        title: 'No se pudo eliminar',
+        text: 'No fue posible eliminar el detalle. Intenta nuevamente.'
+      });
       return;
     }
 
-    const detail = payload?.data ?? payload;
-    const realId = String(detail?.id_ai_detalle ?? detail?.id_detalle ?? detail?.id ?? id);
-
-    setVal(pick(modal, '#id', '[name="codigo"]'), detail.n_ot ?? codigo, '');
-    setVal(pick(modal, '#id2', '[name="id"]'), realId, '');
-
-    setVal(pick(modal, '#fecha', '[name="fecha"]'), detail.fecha ?? fecha, '');
-    setVal(pick(modal, '#desc', '[name="desc"]'), detail.descripcion ?? '', '');
-    setVal(pick(modal, '#cant', '[name="cant"]'), detail.cant_tec ?? '', '');
-
-    setVal(pick(modal, '#turno', '[name="turno"]'), detail.id_ai_turno ?? '', '');
-    setVal(pick(modal, '#status', '[name="status"]'), detail.id_ai_estado ?? '', '');
-    setVal(pick(modal, '#cco', '[name="cco"]'), detail.id_miembro_cco ?? '', '');
-    setVal(pick(modal, '#ccf', '[name="ccf"]'), detail.id_miembro_ccf ?? '', '');
-    setVal(pick(modal, '#tec', '[name="tec"]'), detail.id_user_act ?? '', '');
-
-    setVal(pick(modal, '#prep_ini', '[name="prep_ini"]'), detail.hora_ini_pre ?? '', '');
-    setVal(pick(modal, '#prep_fin', '[name="prep_fin"]'), detail.hora_fin_pre ?? '', '');
-    setVal(pick(modal, '#tras_ini', '[name="tras_ini"]'), detail.hora_ini_tra ?? '', '');
-    setVal(pick(modal, '#tras_fin', '[name="tras_fin"]'), detail.hora_fin_tra ?? '', '');
-    setVal(pick(modal, '#ejec_ini', '[name="ejec_ini"]'), detail.hora_ini_eje ?? '', '');
-    setVal(pick(modal, '#ejec_fin', '[name="ejec_fin"]'), detail.hora_fin_eje ?? '', '');
-    setVal(pick(modal, '#observacion', '[name="observacion"]'), detail.observacion ?? '', '');
-
-    const modo = document.getElementById('modoEdicionLabel');
-    if (modo) modo.textContent = 'Edición';
+    Swal.fire({ icon: 'success', title: 'Eliminado', text: 'Detalle eliminado correctamente.' });
+    resetFormFields();
+    reiniciarTabla();
   }
 
-  // =========================
-  // ELIMINAR (tipo=eliminar)
-  // =========================
-  function eliminarDetalles(id, fecha, codigo) {
-    if (!id || !fecha || !codigo) return;
+  listModal.addEventListener('click', function (e) {
+    const viewBtn = e.target.closest('.js-view-detalle');
+    if (viewBtn) {
+      abrirFormularioDetalle('view', {
+        id: viewBtn.dataset.id || '',
+        fecha: viewBtn.dataset.fecha || '',
+        codigo: viewBtn.dataset.ot || ''
+      });
+      return;
+    }
 
-    Swal.fire({
-      title: "¿Eliminar detalle?",
-      text: "Se eliminará el registro.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Sí, eliminar",
-      cancelButtonText: "Cancelar"
-    }).then(async (r) => {
-      if (!r.isConfirmed) return;
+    const editBtn = e.target.closest('.js-edit-detalle');
+    if (editBtn) {
+      abrirFormularioDetalle('edit', {
+        id: editBtn.dataset.id || '',
+        fecha: editBtn.dataset.fecha || '',
+        codigo: editBtn.dataset.ot || ''
+      });
+      return;
+    }
 
-      const body = new URLSearchParams();
-      body.append('tipo', 'eliminar');
-      body.append('id', id);
-      body.append('fecha', fecha);
-      body.append('codigo', codigo);
+    const delBtn = e.target.closest('.js-del-detalle');
+    if (delBtn) {
+      eliminarDetalles(delBtn.dataset.id || '', delBtn.dataset.fecha || '', delBtn.dataset.ot || '');
+    }
+  });
 
-      const { res, payload } = await fetchJsonSafe(urlDetalleAccion, body);
+  listModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const idBtn = button ? button.getAttribute('data-bs-id') : null;
+    if (!idBtn) return;
 
-      if (!res.ok || payload?.ok === false) {
-        console.error('[ELIMINAR] fallo', { status: res.status, payload });
-        showAlertFromBackend(payload, {
-          title: 'No se pudo eliminar',
-          text: 'No fue posible eliminar el detalle. Intenta nuevamente.'
-        });
-        return;
-      }
+    const codigoOtEl = listModal.querySelector('#codigoOt');
+    const nombreOtEl = listModal.querySelector('#nombreOt');
+    const inputCodigo = formModalEl.querySelector('#id');
+    const inputId2 = formModalEl.querySelector('#id2');
 
-      Swal.fire({ icon: 'success', title: 'Eliminado', text: 'Detalle eliminado correctamente.' });
-      limpiarDetalles();
+    setOtFinalizadaState(false);
+
+    const fd = new FormData();
+    fd.append('id', idBtn);
+
+    fetch(urlCargarOt, { method: 'POST', body: fd })
+      .then(r => r.json())
+      .then(payload => {
+        const data = payload?.data ?? payload;
+        if (!data) return;
+
+        const finalizada = Number(data.ot_finalizada || 0) === 1;
+
+        if (codigoOtEl) codigoOtEl.textContent = data.n_ot ?? '';
+        if (nombreOtEl) nombreOtEl.textContent = data.nombre_trab ?? '';
+
+        setVal(inputCodigo, data.n_ot ?? '');
+        setVal(inputId2, '');
+        syncFormOtBadge();
+        resetFormFields();
+        setOtFinalizadaState(finalizada);
+        reiniciarTabla();
+      })
+      .catch(console.error);
+  });
+
+  listModal.addEventListener('shown.bs.modal', function () {
+    if (codigoOtActual()) {
       reiniciarTabla();
+    }
+  });
+
+  listModal.addEventListener('hidden.bs.modal', function () {
+    const codigo = listModal.querySelector('#codigoOt');
+    const nombre = listModal.querySelector('#nombreOt');
+    if (codigo) codigo.textContent = '';
+    if (nombre) nombre.textContent = '-';
+    if (metaOt) metaOt.textContent = '';
+    setOtFinalizadaState(false);
+    resetFormFields();
+    renderDetallesTable([], true);
+    renderDetallesCards([], true);
+    const instance = bootstrap.Modal.getInstance(formModalEl);
+    if (instance) instance.hide();
+  });
+
+  formModalEl.addEventListener('hidden.bs.modal', function () {
+    resetFormFields();
+    updateFormChrome('new', otActualFinalizada());
+  });
+
+  if (btnRecargarDetalle) {
+    btnRecargarDetalle.addEventListener('click', reiniciarTabla);
+  }
+
+  if (btnCrear) {
+    btnCrear.addEventListener('click', function () {
+      abrirFormularioDetalle('new');
     });
   }
 
-  // =========================
-  // GUARDAR (submit => tipo=guardar)
-  // =========================
   if (form) {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       e.stopImmediatePropagation();
 
-      if (submitInFlight) return;
+      if (submitInFlight || formMode === 'view') return;
 
-      const codigo = String(pick(form, '#id', '[name="codigo"]')?.value || '').trim();
-      const idDetalle = String(pick(form, '#id2', '[name="id"]')?.value || '').trim();
-      const modoTxt = document.getElementById('modoEdicionLabel')?.textContent?.trim() || 'Nuevo';
-
-      const v = validateBeforeSave({ modoTxt, codigo, idDetalle });
-      if (!v.ok) return;
+      const validation = validateBeforeSave();
+      if (!validation.ok) return;
 
       Swal.fire({
-        title: "¿Guardar cambios?",
-        text: (idDetalle ? "Se actualizará el detalle." : "Se registrará un nuevo detalle."),
-        icon: "question",
+        title: 'Guardar cambios?',
+        text: validation.idDetalle ? 'Se actualizara el detalle.' : 'Se registrara un nuevo detalle.',
+        icon: 'question',
         showCancelButton: true,
-        confirmButtonText: "Sí, guardar",
-        cancelButtonText: "Cancelar"
+        confirmButtonText: 'Si, guardar',
+        cancelButtonText: 'Cancelar'
       }).then(async (r) => {
         if (!r.isConfirmed) return;
 
@@ -573,34 +740,26 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const body = new URLSearchParams();
         body.append('tipo', 'guardar');
-        body.append('codigo', codigo);
-        body.append('id', idDetalle);
+        body.append('codigo', validation.codigo);
+        body.append('id', validation.idDetalle);
         body.append('fecha', getValue('#fecha'));
-
         body.append('desc', getValue('#desc'));
         body.append('cant', getValue('#cant'));
         body.append('turno', getValue('#turno'));
-        body.append('status', getValue('#status'));
         body.append('cco', getValue('#cco'));
         body.append('ccf', getValue('#ccf'));
         body.append('tec', getValue('#tec'));
-
-        body.append('prep_ini', getValue('#prep_ini'));
-        body.append('prep_fin', getValue('#prep_fin'));
-        body.append('tras_ini', getValue('#tras_ini'));
-        body.append('tras_fin', getValue('#tras_fin'));
-        body.append('ejec_ini', getValue('#ejec_ini'));
-        body.append('ejec_fin', getValue('#ejec_fin'));
+        body.append('hora_inicio', getValue('#hora_inicio'));
+        body.append('hora_fin', getValue('#hora_fin'));
         body.append('observacion', getValue('#observacion'));
 
         const { res, payload } = await fetchJsonSafe(urlDetalleAccion, body);
         submitInFlight = false;
 
         if (!res.ok || payload?.ok === false) {
-          console.error('[GUARDAR] fallo', { status: res.status, payload });
           showAlertFromBackend(payload, {
             title: 'No se pudo guardar',
-            text: 'Revisa los datos e inténtalo nuevamente.',
+            text: 'Revisa los datos e intentalo nuevamente.',
             icon: 'error'
           });
           return;
@@ -614,34 +773,26 @@ document.addEventListener('DOMContentLoaded', function () {
             : 'Detalle registrado correctamente.'
         });
 
-        limpiarDetalles();
+        getFormModalInstance().hide();
+        resetFormFields();
         reiniciarTabla();
       });
     }, true);
   }
 
-  // =========================
-  // LIMPIAR
-  // =========================
   window.limpiarDetalles = function () {
-    setVal(pick(modal, '#id2', '[name="id"]'), '');
+    resetFormFields();
+    updateFormChrome('new', otActualFinalizada());
+  };
 
-    ['fecha', 'desc', 'cant', 'prep_ini', 'prep_fin', 'tras_ini', 'tras_fin', 'ejec_ini', 'ejec_fin', 'observacion']
-      .forEach(id => setVal(pick(modal, `#${id}`), ''));
-
-    ['turno', 'status', 'tec', 'cco', 'ccf']
-      .forEach(id => setVal(pick(modal, `#${id}`, `[name="${id}"]`), ''));
-
-    const modo = document.getElementById('modoEdicionLabel');
-    if (modo) modo.textContent = 'Nuevo';
+  window.enfocarFormularioDetalle = function () {
+    abrirFormularioDetalle('new');
   };
 
   window.reiniciarTabla = reiniciarTabla;
+  window.cerrarVentana = function () {
+    resetFormFields();
+    renderDetallesTable([], true);
+    renderDetallesCards([], true);
+  };
 });
-
-function formatearFecha(fecha) {
-  if (!fecha) return '';
-  const partes = String(fecha).split('-');
-  if (partes.length !== 3) return fecha;
-  return `${partes[2]}/${partes[1]}/${partes[0]}`;
-}

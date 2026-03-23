@@ -19,11 +19,11 @@
                     <strong>Parámetros del sistema</strong>
 
                     <?php if ($isAdmin) { ?>
-                    <span class="badge bg-success">
+                    <span class="badge section-role-badge bg-success">
                         <i class="bi bi-shield-check me-1"></i>Administrador
                     </span>
                     <?php } else { ?>
-                    <span class="badge bg-secondary">
+                    <span class="badge section-role-badge bg-secondary">
                         <i class="bi bi-person me-1"></i>Usuario
                     </span>
                     <?php } ?>

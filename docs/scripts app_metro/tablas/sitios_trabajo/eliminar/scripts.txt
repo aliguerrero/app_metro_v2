@@ -1,6 +1,0 @@
-Modulo: sitios_trabajo
-Operacion: eliminar
-
-Sentencias SQL:
-
-UPDATE sitio_trabajo SET std_reg = 0 WHERE id_ai_sitio = :id LIMIT 1;

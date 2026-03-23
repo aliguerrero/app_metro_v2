@@ -1,0 +1,24 @@
+Modulo: reportes
+Operacion: listar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/reporteGeneradoController.php -> listarReportesGeneradosHtml
+SELECT
+                id_ai_reporte_generado,
+                tipo_reporte,
+                titulo_reporte,
+                nombre_archivo,
+                ruta_archivo,
+                mime_type,
+                tamano_bytes,
+                parametros_json,
+                id_user_generador,
+                nombre_user_generador,
+                username_generador,
+                created_at,
+                std_reg
+             FROM vw_reportes_generados
+             ORDER BY created_at DESC, id_ai_reporte_generado DESC
+             LIMIT 200

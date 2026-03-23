@@ -1,7 +1,5 @@
 <script src="<?php echo APP_URL; ?>app/views/js/jquery_3.7.0.js"></script>
 <!-- ventana modal-->
-<script src="<?php echo APP_URL; ?>app/views/js/bootstrap.min.js"></script>
-<script src="<?php echo APP_URL; ?>app/views/js/popper.min.js"></script>
 <script src="<?php echo APP_URL; ?>app/views/js/bootstrap.bundle.js"></script>
 
 
@@ -11,3 +9,4 @@
 <!-- Plugins and scripts required by this view-->
 <script src="<?php echo APP_URL; ?>app/views/js/ajax.js"></script>
 <script src="<?php echo APP_URL; ?>app/views/js/select2.min.js"></script>
+<script src="<?php echo APP_URL; ?>app/views/js/actionGroups.js"></script>

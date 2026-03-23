@@ -63,14 +63,12 @@ try {
     $usuarios = q(
         $mm,
         "SELECT
-            u.id_empleado AS id_user,
-            COALESCE(NULLIF(e.nombre_empleado, ''), u.id_empleado) AS user,
-            u.username
-         FROM user_system u
-         LEFT JOIN empleado e
-           ON e.id_empleado = u.id_empleado
-         WHERE u.std_reg = 1
-         ORDER BY COALESCE(NULLIF(e.nombre_empleado, ''), u.id_empleado) ASC"
+            id_empleado AS id_user,
+            COALESCE(NULLIF(nombre_empleado, ''), id_empleado) AS user,
+            username
+         FROM vw_usuario_empleado
+         WHERE std_reg = 1
+         ORDER BY COALESCE(NULLIF(nombre_empleado, ''), id_empleado) ASC"
     );
 
     echo json_encode([

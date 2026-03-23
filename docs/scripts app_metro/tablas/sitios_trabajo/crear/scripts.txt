@@ -1,6 +1,0 @@
-Modulo: sitios_trabajo
-Operacion: crear
-
-Sentencias SQL:
-
-INSERT INTO sitio_trabajo (nombre_sitio, std_reg) VALUES (:n, 1);

@@ -1,0 +1,11 @@
+Modulo: configuracion_empresa
+Operacion: actualizar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/empresaConfigController.php -> actualizarEmpresaControlador
+SELECT logo FROM empresa_config WHERE id = 1 LIMIT 1
+
+SQL [2] - app/controllers/empresaConfigController.php -> actualizarEmpresaControlador
+UPDATE empresa_config SET nombre = :nombre, rif = :rif, direccion = :direccion, telefono = :telefono, email = :email WHERE id = :id

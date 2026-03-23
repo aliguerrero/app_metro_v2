@@ -1,0 +1,8 @@
+Modulo: configuracion_empresa
+Operacion: listar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/empresaConfigController.php -> obtenerEmpresaControlador
+SELECT {{ $this->columnasTablaSql('empresa_config') }} FROM empresa_config WHERE id = 1 LIMIT 1

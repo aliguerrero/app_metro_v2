@@ -1,0 +1,31 @@
+Modulo: roles
+Operacion: crear
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/rolCrud.php
+SELECT id FROM roles_permisos WHERE nombre_rol = :n LIMIT 1
+
+SQL [2] - app/controllers/rolCrud.php
+INSERT INTO roles_permisos (
+                    nombre_rol,
+                    perm_usuarios_view, perm_usuarios_add, perm_usuarios_edit, perm_usuarios_delete,
+                    perm_herramienta_view, perm_herramienta_add, perm_herramienta_edit, perm_herramienta_delete,
+                    perm_miembro_view, perm_miembro_add, perm_miembro_edit, perm_miembro_delete,
+                    perm_ot_view, perm_ot_add, perm_ot_edit, perm_ot_delete,
+                    perm_ot_add_detalle, perm_ot_generar_reporte, perm_ot_add_herramienta
+                ) VALUES (
+                    :nombre,
+                    :puv, :pua, :pue, :pud,
+                    :phv, :pha, :phe, :phd,
+                    :pmv, :pma, :pme, :pmd,
+                    :potv, :pota, :pote, :potd,
+                    :potad, :potgr, :potah
+                )
+
+SQL [3] - app/controllers/rolCrud.php
+SELECT id FROM roles_permisos WHERE nombre_rol = :n ORDER BY id DESC LIMIT 1
+
+SQL [4] - app/controllers/rolCrud.php
+SELECT {{ $ins->columnasTablaSql('roles_permisos') }} FROM roles_permisos WHERE id = :id LIMIT 1

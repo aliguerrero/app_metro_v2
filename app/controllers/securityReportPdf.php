@@ -69,7 +69,7 @@ $auditRows = (int)fetchScalar($authPdo, "SELECT COUNT(1) FROM log_user");
 $ordersWithoutArea = (int)fetchScalar($authPdo, "SELECT COUNT(1) FROM orden_trabajo ot LEFT JOIN area_trabajo a ON a.id_ai_area = ot.id_ai_area WHERE ot.std_reg = 1 AND (a.id_ai_area IS NULL OR a.std_reg <> 1)");
 $ordersWithoutSite = (int)fetchScalar($authPdo, "SELECT COUNT(1) FROM orden_trabajo ot LEFT JOIN sitio_trabajo s ON s.id_ai_sitio = ot.id_ai_sitio WHERE ot.std_reg = 1 AND (s.id_ai_sitio IS NULL OR s.std_reg <> 1)");
 $detailsWithoutTurn = (int)fetchScalar($authPdo, "SELECT COUNT(1) FROM detalle_orden d LEFT JOIN turno_trabajo t ON t.id_ai_turno = d.id_ai_turno WHERE t.id_ai_turno IS NULL OR t.std_reg <> 1");
-$detailsWithoutState = (int)fetchScalar($authPdo, "SELECT COUNT(1) FROM detalle_orden d LEFT JOIN estado_ot e ON e.id_ai_estado = d.id_ai_estado WHERE e.id_ai_estado IS NULL OR e.std_reg <> 1");
+$detailsWithoutState = (int)fetchScalar($authPdo, "SELECT COUNT(1) FROM orden_trabajo ot LEFT JOIN estado_ot e ON e.id_ai_estado = ot.id_ai_estado WHERE ot.std_reg = 1 AND (e.id_ai_estado IS NULL OR e.std_reg <> 1)");
 $inactiveToolsAssigned = (int)fetchScalar($authPdo, "SELECT COUNT(1) FROM herramientaot hot INNER JOIN herramienta h ON h.id_ai_herramienta = hot.id_ai_herramienta WHERE h.std_reg = 0");
 $duplicateSites = (int)fetchScalar($authPdo, "SELECT COUNT(1) FROM (SELECT nombre_sitio FROM sitio_trabajo WHERE std_reg = 1 GROUP BY nombre_sitio HAVING COUNT(1) > 1) q");
 

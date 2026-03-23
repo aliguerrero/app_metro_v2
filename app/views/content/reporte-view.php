@@ -6,8 +6,6 @@ $can = function (string $key) use ($perms): bool {
     return isset($perms[$key]) && (int)$perms[$key] === 1;
 };
 
-// Permiso mínimo recomendado para entrar a reportes (ajústalo si quieres)
-// Si no tienes un permiso específico de reportes, puedes usar perm_ot_view como base.
 if (!$can('perm_ot_view') && !$can('perm_ot_generar_reporte')) {
     echo '<div class="alert alert-danger mt-3">Acceso denegado: no tienes permisos para reportes.</div>';
     return;
@@ -18,30 +16,34 @@ if (!$can('perm_ot_view') && !$can('perm_ot_generar_reporte')) {
     <style>
         #report-builder .card,
         #report-preview .card {
-            min-height: 520px;
+            min-height: 580px;
         }
+
         #report-preview .preview-wrapper {
-            min-height: 55vh;
+            min-height: 64vh;
         }
+
         @media (min-width: 992px) {
             #report-preview .preview-wrapper {
-                min-height: 70vh;
+                min-height: 78vh;
             }
         }
+
         @media (max-width: 991px) {
             #report-builder .card,
             #report-preview .card {
                 min-height: auto;
             }
         }
+
         #previewFrame {
             border: 0;
+            background: #eef2f7;
         }
     </style>
-    <div class="row g-3 align-items-stretch">
 
-        <!-- PANEL IZQUIERDO: CONSTRUCTOR -->
-        <div class="col-12 col-lg-4" id="report-builder">
+    <div class="row g-3 align-items-stretch">
+        <div class="col-12 col-lg-3" id="report-builder">
             <div class="card shadow-sm h-100">
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <div>
@@ -61,108 +63,103 @@ if (!$can('perm_ot_view') && !$can('perm_ot_generar_reporte')) {
 
                 <div class="card-body d-flex flex-column">
                     <div class="flex-grow-1">
-                        <!-- Tipo de reporte -->
-                    <div class="mb-3">
-                        <label class="form-label"><b>Tipo de reporte</b></label>
-                        <select id="tipo_reporte" class="form-select">
-                            <option value="">Seleccione...</option>
-                            <option value="ot_resumen">OT (Resumen)</option>
-                            <option value="ot_detallado">OT (Detallado)</option>
-                            <option value="herramientas">Herramientas</option>
-                            <option value="miembros">Miembros</option>
-                            <option value="usuarios">Usuarios</option>
-                        </select>
-                    </div>
-
-                    <!-- Formato -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label"><b>Papel</b></label>
-                            <select id="papel" class="form-select">
-                                <option value="A4" selected>A4</option>
-                                <option value="LETTER">Carta</option>
+                        <div class="mb-3">
+                            <label class="form-label"><b>Tipo de reporte</b></label>
+                            <select id="tipo_reporte" class="form-select">
+                                <option value="">Seleccione...</option>
+                                <option value="ot_resumen">OT (Resumen)</option>
+                                <option value="ot_detallado">OT (Detallado)</option>
+                                <option value="herramientas">Herramientas</option>
+                                <option value="miembros">Miembros</option>
+                                <option value="usuarios">Usuarios</option>
                             </select>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label"><b>Orientación</b></label>
-                            <select id="orientacion" class="form-select">
-                                <option value="portrait" selected>Vertical</option>
-                                <option value="landscape">Horizontal</option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <!-- Membrete/Logo -->
-                    <div class="mb-3">
-                        <label class="form-label"><b>Encabezado</b></label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="incluir_membrete" checked>
-                            <label class="form-check-label" for="incluir_membrete">Incluir membrete</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="incluir_logo" checked>
-                            <label class="form-check-label" for="incluir_logo">Incluir logo</label>
-                        </div>
-                    </div>
-
-                    <hr>
-
-                    <!-- FILTROS OT -->
-                    <div id="filtros_ot" style="display:none;">
-                        <div class="mb-2">
-                            <label class="form-label"><b>N° OT</b> (opcional)</label>
-                            <input type="text" class="form-control" id="f_n_ot" placeholder="Ej: 000123">
-                            <small class="text-muted">En OT Detallado, si colocas N° OT genera el reporte de esa OT.</small>
-                        </div>
-
-                        <div class="row g-2 mb-2">
+                        <div class="row g-2 mb-3">
                             <div class="col-6">
-                                <label class="form-label"><b>Desde</b></label>
-                                <input type="date" class="form-control" id="f_desde">
+                                <label class="form-label"><b>Papel</b></label>
+                                <select id="papel" class="form-select">
+                                    <option value="A4" selected>A4</option>
+                                    <option value="LETTER">Carta</option>
+                                </select>
                             </div>
                             <div class="col-6">
-                                <label class="form-label"><b>Hasta</b></label>
-                                <input type="date" class="form-control" id="f_hasta">
+                                <label class="form-label"><b>Orientacion</b></label>
+                                <select id="orientacion" class="form-select">
+                                    <option value="portrait" selected>Vertical</option>
+                                    <option value="landscape">Horizontal</option>
+                                </select>
                             </div>
                         </div>
 
-                        <div class="mb-2">
-                            <label class="form-label"><b>Área</b></label>
-                            <select id="f_area" class="form-select">
-                                <option value="">Todas</option>
-                            </select>
+                        <div class="mb-3">
+                            <label class="form-label"><b>Encabezado</b></label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="incluir_membrete" checked>
+                                <label class="form-check-label" for="incluir_membrete">Incluir membrete</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="incluir_logo" checked>
+                                <label class="form-check-label" for="incluir_logo">Incluir logo</label>
+                            </div>
                         </div>
 
-                        <div class="mb-2">
-                            <label class="form-label"><b>Sitio</b></label>
-                            <select id="f_sitio" class="form-select">
-                                <option value="">Todos</option>
-                            </select>
+                        <hr>
+
+                        <div id="filtros_ot" style="display:none;">
+                            <div class="mb-2">
+                                <label class="form-label"><b>Nro. OT</b> (opcional)</label>
+                                <input type="text" class="form-control" id="f_n_ot" placeholder="Ej: 000123">
+                                <small class="text-muted">En OT Detallado, si colocas Nro. OT genera el reporte de esa OT.</small>
+                            </div>
+
+                            <div class="row g-2 mb-2">
+                                <div class="col-6">
+                                    <label class="form-label"><b>Desde</b></label>
+                                    <input type="date" class="form-control" id="f_desde">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label"><b>Hasta</b></label>
+                                    <input type="date" class="form-control" id="f_hasta">
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label"><b>Area</b></label>
+                                <select id="f_area" class="form-select">
+                                    <option value="">Todas</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label"><b>Sitio</b></label>
+                                <select id="f_sitio" class="form-select">
+                                    <option value="">Todos</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label"><b>Estado</b></label>
+                                <select id="f_estado" class="form-select">
+                                    <option value="">Todos</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label"><b>Operador/Tecnico</b></label>
+                                <select id="f_usuario" class="form-select">
+                                    <option value="">Todos</option>
+                                </select>
+                            </div>
                         </div>
 
-                        <div class="mb-2">
-                            <label class="form-label"><b>Estado</b></label>
-                            <select id="f_estado" class="form-select">
-                                <option value="">Todos</option>
-                            </select>
+                        <div id="filtros_general" style="display:none;">
+                            <div class="mb-2">
+                                <label class="form-label"><b>Buscar</b></label>
+                                <input type="text" class="form-control" id="f_q" placeholder="Escribe para filtrar...">
+                                <small class="text-muted">Filtra mientras escribes (si queda vacio, muestra todo).</small>
+                            </div>
                         </div>
-
-                        <div class="mb-2">
-                            <label class="form-label"><b>Operador/Técnico</b></label>
-                            <select id="f_usuario" class="form-select">
-                                <option value="">Todos</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- FILTRO GENERAL (para herramientas/miembros/usuarios) -->
-                    <div id="filtros_general" style="display:none;">
-                        <div class="mb-2">
-                            <label class="form-label"><b>Buscar</b></label>
-                            <input type="text" class="form-control" id="f_q" placeholder="Escribe para filtrar...">
-                            <small class="text-muted">Filtra mientras escribes (si queda vacío, muestra todo).</small>
-                        </div>
-                    </div>
                     </div>
 
                     <hr class="my-3 mb-0">
@@ -180,24 +177,20 @@ if (!$can('perm_ot_view') && !$can('perm_ot_generar_reporte')) {
 
                         <div class="mt-3">
                             <div class="alert alert-info mb-0">
-                                <small>
-                                    La vista previa se genera en HTML a la derecha.
-                                </small>
+                                <small>La vista previa se genera en HTML a la derecha.</small>
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
 
-        <!-- PANEL DERECHO: VISTA PREVIA -->
-        <div class="col-12 col-lg-8" id="report-preview">
+        <div class="col-12 col-lg-9" id="report-preview">
             <div class="card shadow-sm h-100">
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <div>
                         <h5 class="mb-0">Vista previa</h5>
-                        <small class="text-muted">Se actualiza al previsualizar y también automáticamente</small>
+                        <small class="text-muted">Se actualiza al previsualizar y tambien automaticamente</small>
                     </div>
                     <button class="btn btn-outline-secondary btn-sm" id="btn_limpiar_preview" type="button">
                         Limpiar
@@ -211,7 +204,6 @@ if (!$can('perm_ot_view') && !$can('perm_ot_generar_reporte')) {
                 </div>
             </div>
         </div>
-
     </div>
 </div>
 

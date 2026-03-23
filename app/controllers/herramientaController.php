@@ -363,33 +363,21 @@ class herramientaController extends mainModel
 
         $consulta_datos = "
         SELECT
-            h.id_ai_herramienta,
-            h.nombre_herramienta,
-            h.id_ai_categoria_herramienta,
-            COALESCE(ch.nombre_categoria, 'SIN CATEGORIA') AS nombre_categoria,
-            h.cantidad,
-            h.estado,
-            h.std_reg,
-            (h.cantidad - COALESCE(SUM(hot.cantidadot), 0)) AS cantidad_disponible,
-            COALESCE(SUM(hot.cantidadot), 0) AS herramienta_ocupada
-        FROM herramienta h
-        LEFT JOIN categoria_herramienta ch
-          ON ch.id_ai_categoria_herramienta = h.id_ai_categoria_herramienta
-        LEFT JOIN herramientaot hot
-          ON h.id_ai_herramienta = hot.id_ai_herramienta
-        WHERE h.std_reg = 1
-        GROUP BY
-            h.id_ai_herramienta,
-            h.nombre_herramienta,
-            h.id_ai_categoria_herramienta,
-            ch.nombre_categoria,
-            h.cantidad,
-            h.estado,
-            h.std_reg
-        ORDER BY h.id_ai_herramienta ASC
+            id_ai_herramienta,
+            nombre_herramienta,
+            id_ai_categoria_herramienta,
+            COALESCE(nombre_categoria, 'SIN CATEGORIA') AS nombre_categoria,
+            cantidad_total AS cantidad,
+            estado,
+            std_reg,
+            cantidad_disponible,
+            cantidad_ocupada AS herramienta_ocupada
+        FROM vw_herramienta_disponibilidad
+        WHERE std_reg = 1
+        ORDER BY id_ai_herramienta ASC
         ";
 
-        $consulta_total = "SELECT COUNT(1) FROM herramienta WHERE std_reg = 1";
+        $consulta_total = "SELECT COUNT(1) FROM vw_herramienta_disponibilidad WHERE std_reg = 1";
 
         $datos = $this->ejecutarConsulta($consulta_datos);
         $datos = $datos ? $datos->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -415,7 +403,7 @@ class herramientaController extends mainModel
                   <th class="text-center">Total</th>
                   <th class="text-center">Cant. Disp.</th>
                   <th class="text-center">Cant. Ocup.</th>
-                  <th class="text-center" colspan="2">Acciones</th>
+                  <th class="text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -453,35 +441,37 @@ class herramientaController extends mainModel
                 <td class="col-1"><div class="text-center"><b>' . $ocupada . '</b></div></td>
             ';
 
+                $acciones = '
+                  <div class="tools-action-group" role="group" aria-label="Acciones de herramienta">
+                    <button type="button" class="btn btn-info text-white js-tool-ocupaciones"
+                      data-bs-toggle="modal"
+                      data-bs-target="#herramientaOcupacionesModal"
+                      data-id="' . $id . '"
+                      data-nombre="' . $nombre . '"
+                      title="Ver ocupaciones">
+                      <i class="bi bi-diagram-3"></i>
+                    </button>';
+
                 if ($canEdit) {
-                    $tabla .= '
-                  <td class="col-p">
+                    $acciones .= '
                     <a href="#" title="Modificar" class="btn btn-warning text-dark" data-bs-toggle="modal" data-bs-target="#ventanaModalModificarHerr" data-bs-id="' . $id . '">
                       <i class="bi bi-pencil text-white"></i>
-                    </a>
-                  </td>
-                ';
-                } else {
-                    $tabla .= '<td class="col-p"></td>';
+                    </a>';
                 }
 
                 if ($canDelete) {
-                    $tabla .= '
-                  <td class="col-p">
-                    <form class="FormularioAjax" action="' . APP_URL . 'app/ajax/herramientaAjax.php" method="POST">
-                      <input type="hidden" name="modulo_herramienta" value="eliminar">
-                      <input type="hidden" name="herramienta_id" value="' . $id . '">
-                      <button type="submit" class="btn btn-danger" title="Eliminar">
-                        <i class="bi bi-trash"></i>
-                      </button>
-                    </form>
-                  </td>
-                ';
-                } else {
-                    $tabla .= '<td class="col-p"></td>';
+                    $acciones .= '
+                    <button type="button" class="btn btn-danger" title="Eliminar"
+                      onclick="eliminarHerramienta(\'' . $id . '\',\'' . APP_URL . '\', ' . ($canEdit ? 'true' : 'false') . ', ' . ($canDelete ? 'true' : 'false') . ')">
+                      <i class="bi bi-trash"></i>
+                    </button>';
                 }
 
-                $tabla .= '</tr>';
+                $acciones .= '</div>';
+
+                $tabla .= '
+                <td class="col-p text-center action-cell">' . $acciones . '</td>
+              </tr>';
 
                 $cards .= '
               <div class="tool-card">
@@ -511,27 +501,34 @@ class herramientaController extends mainModel
                     <div class="tool-value">' . $ocupada . '</div>
                   </div>
 
-                  <div class="tool-actions">';
+                  <div class="tool-actions">
+                    <div class="tools-action-group" role="group" aria-label="Acciones de herramienta">
+                      <button type="button" class="btn btn-info text-white js-tool-ocupaciones"
+                        data-bs-toggle="modal"
+                        data-bs-target="#herramientaOcupacionesModal"
+                        data-id="' . $id . '"
+                        data-nombre="' . $nombre . '"
+                        title="Ver ocupaciones">
+                        <i class="bi bi-diagram-3"></i>
+                      </button>';
 
                 if ($canEdit) {
                     $cards .= '
-                    <a href="#" title="Modificar" class="btn btn-warning text-dark btn-sm" data-bs-toggle="modal" data-bs-target="#ventanaModalModificarHerr" data-bs-id="' . $id . '">
-                      <i class="bi bi-pencil text-white"></i>
-                    </a>';
+                      <a href="#" title="Modificar" class="btn btn-warning text-dark btn-sm" data-bs-toggle="modal" data-bs-target="#ventanaModalModificarHerr" data-bs-id="' . $id . '">
+                        <i class="bi bi-pencil text-white"></i>
+                      </a>';
                 }
 
                 if ($canDelete) {
                     $cards .= '
-                    <form class="FormularioAjax d-inline" action="' . APP_URL . 'app/ajax/herramientaAjax.php" method="POST">
-                      <input type="hidden" name="modulo_herramienta" value="eliminar">
-                      <input type="hidden" name="herramienta_id" value="' . $id . '">
-                      <button type="submit" class="btn btn-danger btn-sm" title="Eliminar">
+                      <button type="button" class="btn btn-danger btn-sm" title="Eliminar"
+                        onclick="eliminarHerramienta(\'' . $id . '\',\'' . APP_URL . '\', ' . ($canEdit ? 'true' : 'false') . ', ' . ($canDelete ? 'true' : 'false') . ')">
                         <i class="bi bi-trash"></i>
-                      </button>
-                    </form>';
+                      </button>';
                 }
 
                 $cards .= '
+                    </div>
                   </div>
                 </div>
               </div>';
@@ -541,7 +538,7 @@ class herramientaController extends mainModel
         } else {
             $tabla .= '
           <tr class="align-middle">
-            <td class="text-center" colspan="10">No hay registros en el sistema</td>
+            <td class="text-center" colspan="9">No hay registros en el sistema</td>
           </tr>
         ';
 
@@ -573,29 +570,17 @@ class herramientaController extends mainModel
 
         $consulta_datos = "
             SELECT
-                h.id_ai_herramienta,
-                h.nombre_herramienta,
-                h.id_ai_categoria_herramienta,
-                COALESCE(ch.nombre_categoria, 'SIN CATEGORIA') AS nombre_categoria,
-                h.cantidad,
-                h.estado,
-                h.std_reg,
-                (h.cantidad - COALESCE(SUM(hot.cantidadot), 0)) AS cantidad_disponible
-            FROM herramienta h
-            LEFT JOIN categoria_herramienta ch
-              ON ch.id_ai_categoria_herramienta = h.id_ai_categoria_herramienta
-            LEFT JOIN herramientaot hot
-              ON h.id_ai_herramienta = hot.id_ai_herramienta
-            WHERE h.std_reg = 1
-            GROUP BY
-                h.id_ai_herramienta,
-                h.nombre_herramienta,
-                h.id_ai_categoria_herramienta,
-                ch.nombre_categoria,
-                h.cantidad,
-                h.estado,
-                h.std_reg
-            ORDER BY h.id_ai_herramienta ASC
+                id_ai_herramienta,
+                nombre_herramienta,
+                id_ai_categoria_herramienta,
+                COALESCE(nombre_categoria, 'SIN CATEGORIA') AS nombre_categoria,
+                cantidad_total AS cantidad,
+                estado,
+                std_reg,
+                cantidad_disponible
+            FROM vw_herramienta_disponibilidad
+            WHERE std_reg = 1
+            ORDER BY id_ai_herramienta ASC
         ";
 
         $datos = $this->ejecutarConsulta($consulta_datos);

@@ -15,19 +15,19 @@
     <link rel="icon" type="image/png" sizes="32x32" href="<?php echo APP_URL; ?>app/views/img/logo.png">
     <link rel="icon" type="image/png" sizes="96x96" href="<?php echo APP_URL; ?>app/views/img/logo.png">
     <link rel="icon" type="image/png" sizes="16x16" href="<?php echo APP_URL; ?>app/views/img/logo.png">
-    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileColor" content="#16222d">
     <meta name="msapplication-TileImage" content="<?php echo APP_URL; ?>app/views/img/logo.png">
-    <meta name="theme-color" content="#ffffff">
+    <meta name="theme-color" content="#16222d">
     <!-- Vendors styles-->
     <link rel="stylesheet" href="<?php echo APP_URL; ?>app/views/css/sweetalert2.min.css">
     <link rel="stylesheet" href="<?php echo APP_URL; ?>app/views/css/simplebar.css">
     <!-- Main styles for this application-->
     <link href="<?php echo APP_URL; ?>app/views/css/style.css" rel="stylesheet">
-    <link href="<?php echo APP_URL; ?>app/views/css/style_personales.css" rel="stylesheet">
+    <link href="<?php echo APP_URL; ?>app/views/css/style_personales.css?v=20260321a" rel="stylesheet">
 
 
     <link href="<?php echo APP_URL; ?>app/views/css/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <link href="<?php echo APP_URL; ?>app/views/css/boxicons-compat.css" rel="stylesheet">
 
     <!-- We use those styles to show code examples, you should remove them in your application.-->
     <link href="<?php echo APP_URL; ?>app/views/css/examples.css" rel="stylesheet">

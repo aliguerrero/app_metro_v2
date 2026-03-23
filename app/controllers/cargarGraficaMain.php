@@ -5,10 +5,10 @@ appsec_require_login();
 
 $mainModel = appsec_main_model();
 $stmt = $mainModel->ejecutarConsultas(
-    "SELECT e.nombre_estado, COUNT(ot.id_ai_estado) AS total_registros
-     FROM detalle_orden ot
-     JOIN estado_ot e ON ot.id_ai_estado = e.id_ai_estado
-     GROUP BY ot.id_ai_estado"
+    "SELECT nombre_estado, COUNT(1) AS total_registros
+     FROM vw_ot_resumen
+     WHERE std_reg = 1
+     GROUP BY id_ai_estado, nombre_estado"
 );
 
 $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];

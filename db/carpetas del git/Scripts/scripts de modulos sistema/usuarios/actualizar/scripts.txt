@@ -1,0 +1,64 @@
+Modulo: usuarios
+Operacion: actualizar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/userController.php -> existeRol
+SELECT 1 FROM roles_permisos WHERE id = :id LIMIT 1
+
+SQL [2] - app/controllers/userController.php -> obtenerEmpleadoActivo
+SELECT
+                e.id_ai_empleado,
+                e.id_empleado,
+                e.nombre_empleado,
+                e.id_ai_categoria_empleado,
+                e.std_reg,
+                COALESCE(c.nombre_categoria, 'SIN CATEGORIA') AS nombre_categoria
+             FROM empleado e
+             LEFT JOIN categoria_empleado c
+               ON c.id_ai_categoria_empleado = e.id_ai_categoria_empleado
+             WHERE e.id_empleado = :id
+               AND e.std_reg = 1
+             LIMIT 1
+
+SQL [3] - app/controllers/userController.php -> obtenerUsuarioPorId
+SELECT
+                id_ai_user,
+                id_empleado,
+                username,
+                password,
+                tipo,
+                std_reg
+             FROM user_system
+             WHERE id_empleado = :id
+             LIMIT 1
+
+SQL [4] - app/controllers/userController.php -> existeUsernameEnOtroUsuario
+SELECT 1
+                FROM user_system
+                WHERE username = :username
+
+Fragmento SQL [5] - app/controllers/userController.php -> existeUsernameEnOtroUsuario
+AND id_empleado <> :exclude
+
+Fragmento SQL [6] - app/controllers/userController.php -> existeUsernameEnOtroUsuario
+LIMIT 1
+
+SQL [7] - app/controllers/userController.php -> actualizarDatosUser
+UPDATE user_system
+             SET id_empleado = :idEmpleado,
+                 username = :username,
+                 tipo = :tipo
+             WHERE id_empleado = :idActual
+
+SQL [8] - app/controllers/userController.php -> actualizarDatosUserSesion
+UPDATE user_system SET username = :username
+
+Fragmento SQL [9] - app/controllers/userController.php -> actualizarDatosUserSesion
+WHERE id_empleado = :id
+
+SQL [10] - app/controllers/userController.php -> actualizarClaveUser
+UPDATE user_system
+             SET password = :password
+             WHERE id_empleado = :id

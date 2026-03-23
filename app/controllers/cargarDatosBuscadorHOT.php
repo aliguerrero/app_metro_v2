@@ -57,31 +57,20 @@ if ($tipoBusqueda !== 'eliminar') {
     // Este endpoint se usa dentro de OT (modal). Mínimo: ver OT.
     requirePerm('perm_ot_view');
 
-        // Subconsulta para evitar agrupar todas las columnas de herramienta
-    $sqlStockJoin = "
-        LEFT JOIN (
-            SELECT id_ai_herramienta, COALESCE(SUM(cantidadot),0) AS herramienta_ocupada
-            FROM herramientaot
-            GROUP BY id_ai_herramienta
-        ) x ON x.id_ai_herramienta = h.id_ai_herramienta
-    ";
-
     switch ($tipoBusqueda) {
 
         case 'todoHer': {
                 $sql = "
                 SELECT
-                    h.id_ai_herramienta,
-                    h.nombre_herramienta,
-                    h.cantidad,
-                    h.estado,
-                    h.std_reg,
-                    (h.cantidad - COALESCE(x.herramienta_ocupada,0)) AS cantidad_disponible,
-                    COALESCE(x.herramienta_ocupada,0) AS herramienta_ocupada
-                FROM herramienta h
-                $sqlStockJoin
-                WHERE h.std_reg = 1
-                ORDER BY h.id_ai_herramienta ASC
+                    id_ai_herramienta,
+                    nombre_herramienta,
+                    cantidad_total AS cantidad,
+                    estado,
+                    std_reg,
+                    cantidad_disponible,
+                    cantidad_ocupada AS herramienta_ocupada
+                FROM vw_herramienta_disponibilidad
+                ORDER BY id_ai_herramienta ASC
             ";
                 $stmt = dbQuery($mainModel, $sql);
                 $rows = ($stmt) ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -95,15 +84,16 @@ if ($tipoBusqueda !== 'eliminar') {
 
                 $sql = "
                 SELECT
-                    hot.id_ai_herramientaOT,
                     hot.n_ot,
                     hot.id_ai_herramienta,
                     h.nombre_herramienta,
-                    hot.cantidadot
+                    SUM(hot.cantidadot) AS cantidadot
                 FROM herramientaot hot
                 LEFT JOIN herramienta h ON hot.id_ai_herramienta = h.id_ai_herramienta
                 WHERE hot.n_ot = :not
-                ORDER BY hot.id_ai_herramientaOT ASC
+                  AND COALESCE(hot.estadoot, 'ASIGNADA') <> 'LIBERADA'
+                GROUP BY hot.n_ot, hot.id_ai_herramienta, h.nombre_herramienta
+                ORDER BY hot.id_ai_herramienta ASC
             ";
                 $stmt = dbQuery($mainModel, $sql, [':not' => $id]);
                 $rows = ($stmt) ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -118,21 +108,20 @@ if ($tipoBusqueda !== 'eliminar') {
 
                 $sql = "
                 SELECT
-                    h.id_ai_herramienta,
-                    h.nombre_herramienta,
-                    h.cantidad,
-                    h.estado,
-                    h.std_reg,
-                    (h.cantidad - COALESCE(x.herramienta_ocupada,0)) AS cantidad_disponible,
-                    COALESCE(x.herramienta_ocupada,0) AS herramienta_ocupada
-                FROM herramienta h
-                $sqlStockJoin
-                WHERE h.std_reg = 1
+                    id_ai_herramienta,
+                    nombre_herramienta,
+                    cantidad_total AS cantidad,
+                    estado,
+                    std_reg,
+                    cantidad_disponible,
+                    cantidad_ocupada AS herramienta_ocupada
+                FROM vw_herramienta_disponibilidad
+                WHERE 1 = 1
                   AND (
-                        CAST(h.id_ai_herramienta AS CHAR) LIKE :q
-                        OR h.nombre_herramienta LIKE :q
+                        CAST(id_ai_herramienta AS CHAR) LIKE :q
+                        OR nombre_herramienta LIKE :q
                   )
-                ORDER BY h.id_ai_herramienta ASC
+                ORDER BY id_ai_herramienta ASC
             ";
                 $stmt = dbQuery($mainModel, $sql, [':q' => $q]);
                 $rows = ($stmt) ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -148,19 +137,20 @@ if ($tipoBusqueda !== 'eliminar') {
 
                 $sql = "
                 SELECT
-                    hot.id_ai_herramientaOT,
                     hot.n_ot,
                     hot.id_ai_herramienta,
                     h.nombre_herramienta,
-                    hot.cantidadot
+                    SUM(hot.cantidadot) AS cantidadot
                 FROM herramientaot hot
                 LEFT JOIN herramienta h ON hot.id_ai_herramienta = h.id_ai_herramienta
                 WHERE hot.n_ot = :not
+                  AND COALESCE(hot.estadoot, 'ASIGNADA') <> 'LIBERADA'
                   AND (
                         CAST(hot.id_ai_herramienta AS CHAR) LIKE :q
                         OR h.nombre_herramienta LIKE :q
                   )
-                ORDER BY hot.id_ai_herramientaOT ASC
+                GROUP BY hot.n_ot, hot.id_ai_herramienta, h.nombre_herramienta
+                ORDER BY hot.id_ai_herramienta ASC
             ";
                 $stmt = dbQuery($mainModel, $sql, [':not' => $id, ':q' => $q]);
                 $rows = ($stmt) ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -190,16 +180,11 @@ if (!in_array($tipo, ['mas', 'menos'], true) || $n_ot === '' || $codigoHer === '
 /** 1) Stock actual (disponible) */
 $sqlStock = "
     SELECT
-        h.id_ai_herramienta,
-        h.cantidad,
-        (h.cantidad - COALESCE(x.ocupada,0)) AS cantidad_disponible
-    FROM herramienta h
-    LEFT JOIN (
-        SELECT id_ai_herramienta, COALESCE(SUM(cantidadot),0) AS ocupada
-        FROM herramientaot
-        GROUP BY id_ai_herramienta
-    ) x ON x.id_ai_herramienta = h.id_ai_herramienta
-    WHERE h.std_reg = 1 AND h.id_ai_herramienta = :idher
+        id_ai_herramienta,
+        cantidad_total AS cantidad,
+        cantidad_disponible
+    FROM vw_herramienta_disponibilidad
+    WHERE id_ai_herramienta = :idher
     LIMIT 1
 ";
 $stmtStock = dbQuery($mainModel, $sqlStock, [':idher' => $codigoHer]);
@@ -211,42 +196,69 @@ if (!$stock) {
 
 /** 2) Existe vínculo OT-Herramienta? */
 $sqlExist = "
-    SELECT cantidadot
+    SELECT COALESCE(SUM(cantidadot), 0) AS cantidadot
     FROM herramientaot
     WHERE n_ot = :not AND id_ai_herramienta = :idher
-    LIMIT 1
+      AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'
 ";
 $stmtExist = dbQuery($mainModel, $sqlExist, [':not' => $n_ot, ':idher' => $codigoHer]);
 $exist = ($stmtExist && $stmtExist->rowCount() > 0) ? $stmtExist->fetch(PDO::FETCH_ASSOC) : null;
 
 $disp = (int)($stock['cantidad_disponible'] ?? 0);
 
-if ($exist) {
+if ($exist && (int)($exist['cantidadot'] ?? 0) > 0) {
     $cantActual = (int)$exist['cantidadot'];
 
     if ($tipo === 'mas') {
         if ($disp <= 0) jsonOut("nohay");
-        $sqlUp = "UPDATE herramientaot SET cantidadot = cantidadot + 1 WHERE n_ot = :not AND id_ai_herramienta = :idher";
-        $stmt = dbQuery($mainModel, $sqlUp, [':not' => $n_ot, ':idher' => $codigoHer]);
-        jsonOut(["ok" => (bool)$stmt]);
+        try {
+            $mainModel->ejecutarProcedimientoFila(
+                "CALL sp_ot_asignar_herramienta(:not, :idher, :cant, :id_user_operacion)",
+                [
+                    ':not' => $n_ot,
+                    ':idher' => (int)$codigoHer,
+                    ':cant' => 1,
+                    ':id_user_operacion' => (string)($_SESSION['id_user'] ?? $_SESSION['id'] ?? ''),
+                ]
+            );
+            jsonOut(["ok" => true]);
+        } catch (Throwable $e) {
+            if (stripos($e->getMessage(), 'disponibilidad') !== false) {
+                jsonOut("nohay");
+            }
+            jsonOut(["ok" => false, "error" => "asignacion_fallida"]);
+        }
     }
 
     // menos
     if ($cantActual <= 1) {
-        $sqlDel = "DELETE FROM herramientaot WHERE n_ot = :not AND id_ai_herramienta = :idher";
+        $sqlDel = "DELETE FROM herramientaot WHERE n_ot = :not AND id_ai_herramienta = :idher AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'";
         $stmt = dbQuery($mainModel, $sqlDel, [':not' => $n_ot, ':idher' => $codigoHer]);
         jsonOut(["ok" => (bool)$stmt]);
     }
 
-    $sqlDown = "UPDATE herramientaot SET cantidadot = cantidadot - 1 WHERE n_ot = :not AND id_ai_herramienta = :idher";
-    $stmt = dbQuery($mainModel, $sqlDown, [':not' => $n_ot, ':idher' => $codigoHer]);
+    dbQuery($mainModel, "DELETE FROM herramientaot WHERE n_ot = :not AND id_ai_herramienta = :idher AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'", [':not' => $n_ot, ':idher' => $codigoHer]);
+    $stmt = dbQuery($mainModel, "INSERT INTO herramientaot (n_ot, id_ai_herramienta, cantidadot, estadoot) VALUES (:not, :idher, :cant, 'ASIGNADA')", [':not' => $n_ot, ':idher' => $codigoHer, ':cant' => ($cantActual - 1)]);
     jsonOut(["ok" => (bool)$stmt]);
 }
 
 // No existe vínculo -> insertar si hay disponible
 if ($disp <= 0) jsonOut("nohay");
 
-$sqlIns = "INSERT INTO herramientaot (n_ot, id_ai_herramienta, cantidadot) VALUES (:not, :idher, 1)";
-$stmt = dbQuery($mainModel, $sqlIns, [':not' => $n_ot, ':idher' => $codigoHer]);
-
-jsonOut(["ok" => (bool)$stmt]);
+try {
+    $mainModel->ejecutarProcedimientoFila(
+        "CALL sp_ot_asignar_herramienta(:not, :idher, :cant, :id_user_operacion)",
+        [
+            ':not' => $n_ot,
+            ':idher' => (int)$codigoHer,
+            ':cant' => 1,
+            ':id_user_operacion' => (string)($_SESSION['id_user'] ?? $_SESSION['id'] ?? ''),
+        ]
+    );
+    jsonOut(["ok" => true]);
+} catch (Throwable $e) {
+    if (stripos($e->getMessage(), 'disponibilidad') !== false) {
+        jsonOut("nohay");
+    }
+    jsonOut(["ok" => false, "error" => "asignacion_fallida"]);
+}

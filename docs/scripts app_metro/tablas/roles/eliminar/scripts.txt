@@ -1,6 +1,0 @@
-Modulo: roles
-Operacion: eliminar
-
-Sentencias SQL:
-
-SELECT id_ai_user, id_user, user, username, password, tipo, std_reg FROM user_system WHERE tipo = :id; DELETE FROM roles_permisos WHERE id = :id;

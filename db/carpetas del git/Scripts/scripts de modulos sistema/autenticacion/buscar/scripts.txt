@@ -1,0 +1,198 @@
+Modulo: autenticacion
+Operacion: buscar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/loginController.php -> sistemaRequiereBootstrapControlador
+SELECT COUNT(*) FROM user_system WHERE std_reg = 1
+
+SQL [2] - app/controllers/loginController.php -> asegurarRolRoot
+SELECT id FROM roles_permisos WHERE id = :id LIMIT 1
+
+SQL [3] - app/controllers/loginController.php -> asegurarRolRoot
+UPDATE roles_permisos
+                 SET {{ implode(', ', $sets) }}
+                 WHERE id = :id
+
+SQL [4] - app/controllers/loginController.php -> asegurarRolRoot
+INSERT INTO roles_permisos (
+                    id,
+                    nombre_rol{{ ($columnsSql !== '' ? ', ' . $columnsSql : '') }}
+                ) VALUES (
+                    :id,
+                    :nombre_rol{{ ($markersSql !== '' ? ', ' . $markersSql : '') }}
+                )
+
+SQL [5] - app/controllers/loginController.php -> asegurarCategoriaRoot
+SELECT id_ai_categoria_empleado, std_reg
+             FROM categoria_empleado
+             WHERE nombre_categoria = :nombre
+             LIMIT 1
+
+SQL [6] - app/controllers/loginController.php -> asegurarCategoriaRoot
+UPDATE categoria_empleado
+                     SET descripcion = :descripcion,
+                         std_reg = 1
+                     WHERE id_ai_categoria_empleado = :id
+
+SQL [7] - app/controllers/loginController.php -> asegurarCategoriaRoot
+INSERT INTO categoria_empleado (nombre_categoria, descripcion, std_reg)
+             VALUES (:nombre, :descripcion, 1)
+
+SQL [8] - app/controllers/loginController.php -> asegurarCategoriaRoot
+SELECT id_ai_categoria_empleado
+             FROM categoria_empleado
+             WHERE nombre_categoria = :nombre
+             ORDER BY id_ai_categoria_empleado DESC
+             LIMIT 1
+
+SQL [9] - app/controllers/loginController.php -> registrarPrimerUsuarioRootControlador
+SELECT COUNT(*) FROM user_system WHERE std_reg = 1
+
+SQL [10] - app/controllers/loginController.php -> registrarPrimerUsuarioRootControlador
+SELECT id_ai_empleado
+                 FROM empleado
+                 WHERE id_empleado = :id_empleado
+                 LIMIT 1
+
+SQL [11] - app/controllers/loginController.php -> registrarPrimerUsuarioRootControlador
+UPDATE empleado
+                     SET nacionalidad = :nacionalidad,
+                         nombre_empleado = :nombre_empleado,
+                         telefono = :telefono,
+                         direccion = :direccion,
+                         correo = :correo,
+                         id_ai_categoria_empleado = :categoria,
+                         std_reg = 1
+                     WHERE id_empleado = :id_empleado
+
+SQL [12] - app/controllers/loginController.php -> registrarPrimerUsuarioRootControlador
+INSERT INTO empleado (
+                        id_empleado,
+                        nacionalidad,
+                        nombre_empleado,
+                        telefono,
+                        direccion,
+                        correo,
+                        id_ai_categoria_empleado,
+                        std_reg
+                     ) VALUES (
+                        :id_empleado,
+                        :nacionalidad,
+                        :nombre_empleado,
+                        :telefono,
+                        :direccion,
+                        :correo,
+                        :categoria,
+                        1
+                     )
+
+SQL [13] - app/controllers/loginController.php -> registrarPrimerUsuarioRootControlador
+SELECT id_ai_user, id_empleado, username
+                 FROM user_system
+                 WHERE id_empleado = :id_empleado
+                 LIMIT 1
+
+SQL [14] - app/controllers/loginController.php -> registrarPrimerUsuarioRootControlador
+SELECT id_ai_user, id_empleado, username
+                 FROM user_system
+                 WHERE username = :username
+                 LIMIT 1
+
+SQL [15] - app/controllers/loginController.php -> registrarPrimerUsuarioRootControlador
+UPDATE user_system
+                     SET id_empleado = :id_empleado,
+                         username = :username,
+                         password = :password,
+                         failed_login_attempts = 0,
+                         account_locked = 0,
+                         locked_at = NULL,
+                         password_reset_required = 0,
+                         last_login_at = NULL,
+                         last_login_ip = NULL,
+                         tipo = :tipo,
+                         std_reg = 1
+                     WHERE id_ai_user = :id_ai_user
+
+SQL [16] - app/controllers/loginController.php -> registrarPrimerUsuarioRootControlador
+INSERT INTO user_system (
+                        id_empleado,
+                        username,
+                        password,
+                        failed_login_attempts,
+                        account_locked,
+                        locked_at,
+                        password_reset_required,
+                        last_login_at,
+                        last_login_ip,
+                        tipo,
+                        std_reg
+                     ) VALUES (
+                        :id_empleado,
+                        :username,
+                        :password,
+                        0,
+                        0,
+                        NULL,
+                        0,
+                        NULL,
+                        NULL,
+                        :tipo,
+                        1
+                     )
+
+SQL [17] - app/controllers/loginController.php -> cargarUsuarioAuthPorUsername
+SELECT
+                {{ $this->columnasTablaSql('user_system', 'u') }},
+                COALESCE(NULLIF(e.nombre_empleado, ''), u.id_empleado) AS nombre_empleado,
+                COALESCE(c.nombre_categoria, 'SIN CATEGORIA') AS nombre_categoria,
+                e.correo,
+                {{ $this->columnasTablaSql('roles_permisos', 'r') }}
+             FROM user_system u
+             LEFT JOIN empleado e
+               ON e.id_empleado = u.id_empleado
+             LEFT JOIN categoria_empleado c
+               ON c.id_ai_categoria_empleado = e.id_ai_categoria_empleado
+             LEFT JOIN roles_permisos r
+               ON r.id = u.tipo
+             WHERE u.username = :username
+             LIMIT 1
+
+SQL [18] - app/controllers/loginController.php -> cargarUsuarioAuthPorIdEmpleado
+SELECT
+                {{ $this->columnasTablaSql('user_system', 'u') }},
+                COALESCE(NULLIF(e.nombre_empleado, ''), u.id_empleado) AS nombre_empleado,
+                COALESCE(c.nombre_categoria, 'SIN CATEGORIA') AS nombre_categoria,
+                e.correo,
+                {{ $this->columnasTablaSql('roles_permisos', 'r') }}
+             FROM user_system u
+             LEFT JOIN empleado e
+               ON e.id_empleado = u.id_empleado
+             LEFT JOIN categoria_empleado c
+               ON c.id_ai_categoria_empleado = e.id_ai_categoria_empleado
+             LEFT JOIN roles_permisos r
+               ON r.id = u.tipo
+             WHERE u.id_empleado = :id_empleado
+             LIMIT 1
+
+SQL [19] - app/controllers/loginController.php -> recuperarClaveControlador
+SELECT
+                    u.id_ai_user,
+                    u.id_empleado,
+                    u.username,
+                    u.std_reg AS user_std_reg,
+                    COALESCE(NULLIF(e.nombre_empleado, ''), u.id_empleado) AS nombre_empleado,
+                    e.correo,
+                    e.std_reg AS empleado_std_reg
+                 FROM user_system u
+                 LEFT JOIN empleado e
+                   ON e.id_empleado = u.id_empleado
+                 WHERE u.username = :username
+                 LIMIT 1
+
+SQL [20] - app/controllers/loginController.php -> iniciarSesionControlador
+CALL sp_usuario_registrar_login_fallido(:username, :ip)
+
+SQL [21] - app/controllers/loginController.php -> iniciarSesionControlador
+CALL sp_usuario_registrar_login_exitoso(:id_empleado, :ip)

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . "/../../config/app.php";
 require_once __DIR__ . "/../views/inc/session_start.php";
 require_once __DIR__ . "/../../autoload.php";
@@ -65,6 +65,42 @@ function isDigits(string $v): bool
   return $v !== '' && ctype_digit($v);
 }
 
+function detallePkOt(mainModel $m): string
+{
+  return $m->columnaExiste('detalle_orden', 'id_ai_detalle') ? 'id_ai_detalle' : 'id_detalle';
+}
+
+function otEstaFinalizada(mainModel $m, string $ot): bool
+{
+  $select = ["n_ot"];
+  if ($m->columnaExiste('orden_trabajo', 'ot_finalizada')) {
+    $select[] = "COALESCE(ot_finalizada, 0) AS ot_finalizada";
+  }
+  if ($m->columnaExiste('orden_trabajo', 'id_ai_estado')) {
+    $select[] = "id_ai_estado";
+  }
+
+  $stmt = $m->ejecutarConsultaConParametros(
+    "SELECT " . implode(', ', $select) . "
+     FROM orden_trabajo
+     WHERE n_ot = :ot
+       AND std_reg = 1
+     LIMIT 1",
+    [':ot' => $ot]
+  );
+
+  if (!$stmt || $stmt->rowCount() === 0) {
+    return false;
+  }
+
+  $row = $stmt->fetch(PDO::FETCH_ASSOC);
+  if ((int)($row['ot_finalizada'] ?? 0) === 1) {
+    return true;
+  }
+
+  return isset($row['id_ai_estado']) && $m->estadoOtEsFinalPorId((int)$row['id_ai_estado']);
+}
+
 $mainModel = new mainModel();
 
 try {
@@ -75,8 +111,13 @@ try {
   $ot   = rq('ot', '');
   $q    = rq('q', '');
 
-  if ($tipo === '' || $ot === '') {
+  if ($tipo === '') {
     jsonResponse(["ok" => false, "error" => "parametros_invalidos"], 400);
+  }
+
+  $tipoRequiereOt = in_array($tipo, ['inventario', 'asignadas', 'agregar', 'actualizar', 'quitar'], true);
+  if ($tipoRequiereOt && $ot === '') {
+    jsonResponse(["ok" => false, "error" => "ot_requerida"], 400);
   }
 
   $qLike = '%' . $q . '%';
@@ -88,33 +129,28 @@ try {
 
     $sql = "
             SELECT
-                h.id_ai_herramienta AS id,
-                h.nombre_herramienta AS nombre,
-                (h.cantidad - COALESCE(occ.ocupada, 0)) AS disponible_total,
+                vhd.id_ai_herramienta AS id,
+                vhd.nombre_herramienta AS nombre,
+                vhd.cantidad_disponible AS disponible_total,
                 COALESCE(otq.en_ot, 0) AS en_ot,
-                (h.cantidad - COALESCE(occ.ocupada, 0)) AS disponible_para_agregar
-            FROM herramienta h
-            LEFT JOIN (
-                SELECT id_ai_herramienta, SUM(cantidadot) AS ocupada
-                FROM herramientaot
-                GROUP BY id_ai_herramienta
-            ) occ ON h.id_ai_herramienta = occ.id_ai_herramienta
+                vhd.cantidad_disponible AS disponible_para_agregar
+            FROM vw_herramienta_disponibilidad vhd
             LEFT JOIN (
                 SELECT id_ai_herramienta, SUM(cantidadot) AS en_ot
                 FROM herramientaot
                 WHERE n_ot = :ot
+                  AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'
                 GROUP BY id_ai_herramienta
-            ) otq ON h.id_ai_herramienta = otq.id_ai_herramienta
-            WHERE h.std_reg = '1'
-              AND (
+            ) otq ON vhd.id_ai_herramienta = otq.id_ai_herramienta
+            WHERE (
                     :q = ''
-                    OR CAST(h.id_ai_herramienta AS CHAR) LIKE :qLike1
-                    OR h.nombre_herramienta LIKE :qLike2
+                    OR CAST(vhd.id_ai_herramienta AS CHAR) LIKE :qLike1
+                    OR vhd.nombre_herramienta LIKE :qLike2
               )
-            ORDER BY h.id_ai_herramienta ASC
+            ORDER BY vhd.id_ai_herramienta ASC
         ";
 
-    // usa el método que ya tienes en tu mainModel (lo vi en tu herramientaController)
+    // usa el mÃ©todo que ya tienes en tu mainModel (lo vi en tu herramientaController)
     $st = $mainModel->ejecutarConsultaConParametros($sql, [
       ':ot' => $ot,
       ':q' => $q,
@@ -139,6 +175,7 @@ try {
             FROM herramientaot hot
             INNER JOIN herramienta h ON hot.id_ai_herramienta = h.id_ai_herramienta
             WHERE hot.n_ot = :ot
+              AND COALESCE(hot.estadoot, 'ASIGNADA') <> 'LIBERADA'
               AND (
                     :q = ''
                     OR CAST(hot.id_ai_herramienta AS CHAR) LIKE :qLike1
@@ -160,14 +197,45 @@ try {
   }
 
   // =========================
+  // GET: OCUPACIONES POR HERRAMIENTA
+  // =========================
+  if ($tipo === 'ocupaciones' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    $herrId = rq('herramienta_id', '');
+
+    if (!isDigits($herrId)) {
+      jsonResponse(["ok" => false, "error" => "herramienta_invalida"], 400);
+    }
+
+    $rows = $mainModel->ejecutarProcedimientoTodos(
+      "CALL sp_herramienta_ocupaciones(:hid, :q)",
+      [
+        ':hid' => (int)$herrId,
+        ':q' => $q,
+      ]
+    );
+
+    jsonResponse(["ok" => true, "data" => $rows]);
+  }
+
+  // =========================
   // POST: ACCIONES (agregar/actualizar/quitar)
   // =========================
   if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonResponse(["ok" => false, "error" => "metodo_no_permitido"], 405);
   }
 
-  // Para modificar asignación en OT (ajusta si tienes otro permiso)
+  // Para modificar asignaciÃ³n en OT (ajusta si tienes otro permiso)
   requireAnyPerm(['perm_herramienta_view', 'perm_ot_add_herramienta', 'perm_ot_add_detalle', 'perm_ot_edit']);
+
+  if (otEstaFinalizada($mainModel, $ot)) {
+    jsonResponse([
+      "ok" => false,
+      "tipo" => "simple",
+      "icono" => "info",
+      "titulo" => "O.T. finalizada",
+      "texto" => "La O.T. ya esta finalizada. No se pueden modificar sus herramientas."
+    ], 409);
+  }
 
   $herrId = rq('herramienta_id', '');
   $cant   = rq('cant', '');
@@ -177,8 +245,8 @@ try {
       "ok" => false,
       "tipo" => "simple",
       "icono" => "warning",
-      "titulo" => "Dato inválido",
-      "texto" => "Herramienta inválida."
+      "titulo" => "Dato invalido",
+      "texto" => "Herramienta invalida."
     ], 400);
   }
 
@@ -204,7 +272,8 @@ try {
   $stCur = $mainModel->ejecutarConsultaConParametros(
     "SELECT COALESCE(SUM(cantidadot),0) AS cur
          FROM herramientaot
-         WHERE n_ot = :ot AND id_ai_herramienta = :hid",
+         WHERE n_ot = :ot AND id_ai_herramienta = :hid
+           AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'",
     [':ot' => $ot, ':hid' => (int)$herrId]
   );
   $cur = $stCur ? (int)$stCur->fetchColumn() : 0;
@@ -216,6 +285,7 @@ try {
          LEFT JOIN (
             SELECT id_ai_herramienta, SUM(cantidadot) AS ocupada
             FROM herramientaot
+            WHERE COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'
             GROUP BY id_ai_herramienta
          ) occ ON h.id_ai_herramienta = occ.id_ai_herramienta
          WHERE h.id_ai_herramienta = :id AND h.std_reg='1'
@@ -228,13 +298,15 @@ try {
   $normalizarSet = function (int $newQty) use ($mainModel, $ot, $herrId) {
     // borra duplicados
     $mainModel->ejecutarConsultaConParametros(
-      "DELETE FROM herramientaot WHERE n_ot = :ot AND id_ai_herramienta = :hid",
+      "DELETE FROM herramientaot
+       WHERE n_ot = :ot AND id_ai_herramienta = :hid
+         AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'",
       [':ot' => $ot, ':hid' => (int)$herrId]
     );
     // inserta una sola
     $mainModel->ejecutarConsultaConParametros(
       "INSERT INTO herramientaot (id_ai_herramienta, n_ot, cantidadot, estadoot)
-             VALUES (:hid, :ot, :cant, NULL)",
+             VALUES (:hid, :ot, :cant, 'ASIGNADA')",
       [':hid' => (int)$herrId, ':ot' => $ot, ':cant' => $newQty]
     );
   };
@@ -242,17 +314,18 @@ try {
   // ========= agregar =========
   if ($tipo === 'agregar') {
     if (!isDigits((string)$cant) || (int)$cant < 1) {
-      jsonResponse(["ok" => false, "tipo" => "simple", "icono" => "warning", "titulo" => "Cantidad inválida", "texto" => "Mínimo 1."], 400);
-    }
-    $add = (int)$cant;
-
-    // Para agregar solo importa lo nuevo contra la disponibilidad actual
-    if ($add > $disp) {
-      jsonResponse(["ok" => false, "tipo" => "simple", "icono" => "info", "titulo" => "Sin disponibilidad", "texto" => "No hay cantidad suficiente."], 409);
+      jsonResponse(["ok" => false, "tipo" => "simple", "icono" => "warning", "titulo" => "Cantidad invalida", "texto" => "Minimo 1."], 400);
     }
 
-    $new = $cur + $add;
-    $normalizarSet($new);
+    $mainModel->ejecutarProcedimientoFila(
+      "CALL sp_ot_asignar_herramienta(:ot, :hid, :cant, :id_user_operacion)",
+      [
+        ':ot' => $ot,
+        ':hid' => (int)$herrId,
+        ':cant' => (int)$cant,
+        ':id_user_operacion' => (string)($_SESSION['id_user'] ?? $_SESSION['id'] ?? ''),
+      ]
+    );
 
     jsonResponse(["ok" => true, "tipo" => "simple", "icono" => "success", "titulo" => "Asignada", "texto" => "Herramienta asignada."]);
   }
@@ -260,13 +333,15 @@ try {
   // ========= actualizar =========
   if ($tipo === 'actualizar') {
     if (!isDigits((string)$cant) || (int)$cant < 0) {
-      jsonResponse(["ok" => false, "tipo" => "simple", "icono" => "warning", "titulo" => "Cantidad inválida", "texto" => "0 o más."], 400);
+      jsonResponse(["ok" => false, "tipo" => "simple", "icono" => "warning", "titulo" => "Cantidad invalida", "texto" => "0 o mas."], 400);
     }
     $new = (int)$cant;
 
     if ($new === 0) {
       $mainModel->ejecutarConsultaConParametros(
-        "DELETE FROM herramientaot WHERE n_ot = :ot AND id_ai_herramienta = :hid",
+        "DELETE FROM herramientaot
+         WHERE n_ot = :ot AND id_ai_herramienta = :hid
+           AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'",
         [':ot' => $ot, ':hid' => (int)$herrId]
       );
       jsonResponse(["ok" => true, "tipo" => "simple", "icono" => "success", "titulo" => "Quitada", "texto" => "Herramienta quitada."]);
@@ -284,7 +359,9 @@ try {
   // ========= quitar =========
   if ($tipo === 'quitar') {
     $mainModel->ejecutarConsultaConParametros(
-      "DELETE FROM herramientaot WHERE n_ot = :ot AND id_ai_herramienta = :hid",
+      "DELETE FROM herramientaot
+       WHERE n_ot = :ot AND id_ai_herramienta = :hid
+         AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'",
       [':ot' => $ot, ':hid' => (int)$herrId]
     );
     jsonResponse(["ok" => true, "tipo" => "simple", "icono" => "success", "titulo" => "Quitada", "texto" => "Herramienta quitada."]);
@@ -298,3 +375,4 @@ try {
     "detail" => $e->getMessage()
   ], 500);
 }
+

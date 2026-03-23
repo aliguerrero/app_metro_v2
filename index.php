@@ -2,6 +2,7 @@
 require_once "./config/app.php";
 require_once "./autoload.php";
 require_once "./app/views/inc/session_start.php";
+require_once "./app/controllers/securityBootstrap.php";
 
 if (!headers_sent()) {
     header('X-Content-Type-Options: nosniff');
@@ -28,16 +29,23 @@ if (isset($_GET['views'])) {
     <?php require_once "./app/views/inc/head.php"; ?>
 </head>
 
-<body class="d-flex justify-content-center align-items-center">
+<?php
+use app\controllers\viewsController;
+use app\controllers\loginController;
+
+$insLogin = new loginController();
+$viewsControllers = new viewsController();
+$vista = $viewsControllers->obternerVistaControlador($url[0]);
+$esVistaPublica = ($vista == "login" || $vista == "404");
+$bodyClass = $esVistaPublica
+    ? 'app-shell auth-page d-flex justify-content-center align-items-center'
+    : 'app-shell app-page';
+?>
+
+<body class="<?php echo $bodyClass; ?>">
     <?php
-    use app\controllers\viewsController;
-    use app\controllers\loginController;
 
-    $insLogin = new loginController();
-    $viewsControllers = new viewsController();
-    $vista = $viewsControllers->obternerVistaControlador($url[0]);
-
-    if ($vista == "login" || $vista == "404") {
+    if ($esVistaPublica) {
         ob_start();
         require_once "./app/views/content/" . $vista . "-view.php";
         $contenidoVista = ob_get_clean() ?: '';

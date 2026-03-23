@@ -1,13 +1,10 @@
-/* estadoCrudUI.js (COMPLETO - fix bug backdrop intermitente) */
 document.addEventListener('DOMContentLoaded', () => {
-    // Evita doble inicialización si el archivo se carga 2 veces
     if (window.__estadoCrudUI_inited) return;
     window.__estadoCrudUI_inited = true;
 
     const dir = (document.getElementById('url')?.value || '').trim();
     const listContainer = document.getElementById('estadoListContainer');
     const btnRecargar = document.getElementById('btnRecargarEstados');
-
     const formCreate = document.getElementById('formEstadoCreate');
     const formUpdate = document.getElementById('formEstadoUpdate');
 
@@ -15,17 +12,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const URL_CRUD = dir + 'app/controllers/estadoCrud.php';
     const URL_LIST = dir + 'app/controllers/estadoList.php';
-
     const MODAL_ID = 'ventanaModalModificarEstado';
 
-    // =========================
-    // Helpers UI
-    // =========================
     const toast = (icon, title) => {
-        if (typeof Swal === 'undefined') return alert(title);
+        if (typeof Swal === 'undefined') {
+            alert(title);
+            return;
+        }
+
         Swal.fire({
             toast: true,
-            position: "bottom-end",
+            position: 'bottom-end',
             timer: 3000,
             showConfirmButton: false,
             icon,
@@ -34,25 +31,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const confirmDialog = async ({ title, text, confirmText }) => {
-        if (typeof Swal === 'undefined') return confirm(text || title || "¿Confirmar?");
+        if (typeof Swal === 'undefined') return confirm(text || title || 'Confirmar');
         const res = await Swal.fire({
-            title: title || "¿Confirmar?",
-            text: text || "¿Deseas continuar?",
-            icon: "question",
+            title: title || 'Confirmar',
+            text: text || 'Deseas continuar?',
+            icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: "#3085d6",
-            cancelButtonColor: "#d33",
-            confirmButtonText: confirmText || "Sí, continuar",
-            cancelButtonText: "Cancelar",
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: confirmText || 'Si, continuar',
+            cancelButtonText: 'Cancelar',
             allowOutsideClick: false,
             allowEscapeKey: true
         });
         return res.isConfirmed;
     };
 
-    // =========================
-    // Modal helpers
-    // =========================
     function getModalEl() {
         return document.getElementById(MODAL_ID);
     }
@@ -62,27 +56,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function cleanupModalUI() {
-        // Solo limpia si NO hay ningún modal visible
         if (anyModalOpen()) return;
-
         document.body.classList.remove('modal-open');
         document.body.style.removeProperty('padding-right');
         document.body.style.removeProperty('overflow');
-
-        document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+        document.querySelectorAll('.modal-backdrop').forEach((backdrop) => backdrop.remove());
     }
 
     function ensureBackdropIfMissing(modalEl) {
-        // Si el modal está abierto y NO hay backdrop, lo reponemos
         if (!modalEl || !modalEl.classList.contains('show')) return;
-
         const hasBackdrop = !!document.querySelector('.modal-backdrop.show');
         if (hasBackdrop) return;
 
-        const bd = document.createElement('div');
-        bd.className = 'modal-backdrop fade show';
-        document.body.appendChild(bd);
-
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop fade show';
+        document.body.appendChild(backdrop);
         document.body.classList.add('modal-open');
         document.body.style.overflow = 'hidden';
     }
@@ -90,41 +78,46 @@ document.addEventListener('DOMContentLoaded', () => {
     function safeHideModal() {
         const modalEl = getModalEl();
         if (!modalEl || !window.bootstrap || !bootstrap.Modal) return;
-
-        const inst = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
-        inst.hide();
+        const instance = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+        instance.hide();
     }
 
-    // Eventos del modal: asegurar backdrop al mostrar; limpiar al cerrar
-    document.addEventListener('shown.bs.modal', (e) => {
-        if (e.target && e.target.id === MODAL_ID) {
-            ensureBackdropIfMissing(e.target);
-        }
-    });
+    function checkboxValue(id) {
+        return document.getElementById(id)?.checked ? '1' : '0';
+    }
 
-    document.addEventListener('hidden.bs.modal', (e) => {
-        if (e.target && e.target.id === MODAL_ID) {
-            cleanupModalUI();
-        }
-    });
+    function wireEstadoFlags(liberaId, bloqueaId) {
+        const liberaEl = document.getElementById(liberaId);
+        const bloqueaEl = document.getElementById(bloqueaId);
+        if (!liberaEl || !bloqueaEl) return;
 
-    // =========================
-    // Fetch helpers
-    // =========================
+        bloqueaEl.addEventListener('change', () => {
+            if (bloqueaEl.checked) {
+                liberaEl.checked = true;
+            }
+        });
+
+        liberaEl.addEventListener('change', () => {
+            if (!liberaEl.checked && bloqueaEl.checked) {
+                bloqueaEl.checked = false;
+            }
+        });
+    }
+
     async function postCrud(formData) {
         const res = await fetch(URL_CRUD, { method: 'POST', body: formData });
         const text = await res.text();
 
         if (text.trim().startsWith('<')) {
-            console.error("Respuesta no JSON:", text);
-            return { ok: false, error: 'respuesta_no_json', raw: text, msg: 'Respuesta inválida del servidor' };
+            console.error('Respuesta no JSON:', text);
+            return { ok: false, error: 'respuesta_no_json', raw: text, msg: 'Respuesta invalida del servidor' };
         }
 
         try {
             return JSON.parse(text);
-        } catch (e) {
-            console.error("JSON inválido:", text);
-            return { ok: false, error: 'json_invalido', raw: text, msg: 'JSON inválido del servidor' };
+        } catch (error) {
+            console.error('JSON invalido:', text);
+            return { ok: false, error: 'json_invalido', raw: text, msg: 'JSON invalido del servidor' };
         }
     }
 
@@ -133,25 +126,38 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch(URL_LIST, { method: 'GET' });
             const html = await res.text();
             listContainer.innerHTML = html;
-        } catch (e) {
-            console.error(e);
+        } catch (error) {
+            console.error(error);
             toast('error', 'No se pudo recargar la lista');
         }
     }
 
-    // =========================================================
-    // CREATE
-    // =========================================================
-    formCreate.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
+    document.addEventListener('shown.bs.modal', (event) => {
+        if (event.target && event.target.id === MODAL_ID) {
+            ensureBackdropIfMissing(event.target);
+        }
+    });
+
+    document.addEventListener('hidden.bs.modal', (event) => {
+        if (event.target && event.target.id === MODAL_ID) {
+            cleanupModalUI();
+        }
+    });
+
+    wireEstadoFlags('libera_herramientas', 'bloquea_ot');
+    wireEstadoFlags('edit_libera_herramientas', 'edit_bloquea_ot');
+
+    formCreate.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
 
         const nombreEl = document.getElementById('nombre_estado');
         const colorEl = document.getElementById('color');
-
         const nombre = (nombreEl?.value || '').trim();
-        const color = (colorEl?.value || '#00FFCC');
+        const color = colorEl?.value || '#00FFCC';
+        const bloqueaOt = checkboxValue('bloquea_ot');
+        const liberaHerramientas = bloqueaOt === '1' ? '1' : checkboxValue('libera_herramientas');
 
         if (!nombre) {
             toast('warning', 'Escribe el nombre del estado');
@@ -159,9 +165,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const ok = await confirmDialog({
-            title: "¿Crear estado?",
-            text: "Se registrará un nuevo estado para las O.T.",
-            confirmText: "Sí, crear"
+            title: 'Crear estado?',
+            text: bloqueaOt === '1'
+                ? 'Se registrara un estado que bloquea la O.T. y tambien liberara herramientas al aplicarse.'
+                : liberaHerramientas === '1'
+                ? 'Se registrara un estado que liberara herramientas sin bloquear la O.T.'
+                : 'Se registrara un nuevo estado para las O.T.',
+            confirmText: 'Si, crear'
         });
 
         if (!ok) return;
@@ -170,36 +180,33 @@ document.addEventListener('DOMContentLoaded', () => {
         fd.append('action', 'create');
         fd.append('nombre_estado', nombre);
         fd.append('color', color);
+        fd.append('libera_herramientas', liberaHerramientas);
+        fd.append('bloquea_ot', bloqueaOt);
 
-        const r = await postCrud(fd);
-
-        if (r.ok) {
-            toast('success', r.msg || 'Estado creado');
+        const response = await postCrud(fd);
+        if (response.ok) {
+            toast('success', response.msg || 'Estado creado');
             formCreate.reset();
             if (colorEl) colorEl.value = '#00FFCC';
             await refreshEstadoList();
-        } else {
-            toast('error', r.msg || 'No se pudo crear');
-            console.error(r);
+            return;
         }
+
+        toast('error', response.msg || 'No se pudo crear');
+        console.error(response);
     }, true);
 
-    // =========================================================
-    // UPDATE
-    // =========================================================
     if (formUpdate) {
-        formUpdate.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
+        formUpdate.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
 
-            const idEl = document.getElementById('edit_id_estado');
-            const nombreEl = document.getElementById('edit_nombre_estado');
-            const colorEl = document.getElementById('edit_color');
-
-            const id = (idEl?.value || '').trim();
-            const nombre = (nombreEl?.value || '').trim();
-            const color = (colorEl?.value || '#00FFCC');
+            const id = (document.getElementById('edit_id_estado')?.value || '').trim();
+            const nombre = (document.getElementById('edit_nombre_estado')?.value || '').trim();
+            const color = document.getElementById('edit_color')?.value || '#00FFCC';
+            const bloqueaOt = checkboxValue('edit_bloquea_ot');
+            const liberaHerramientas = bloqueaOt === '1' ? '1' : checkboxValue('edit_libera_herramientas');
 
             if (!id || !nombre) {
                 toast('warning', 'Completa los datos');
@@ -207,9 +214,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const ok = await confirmDialog({
-                title: "¿Guardar cambios?",
-                text: "Se actualizará el estado con la nueva información.",
-                confirmText: "Sí, guardar"
+                title: 'Guardar cambios?',
+                text: bloqueaOt === '1'
+                    ? 'El estado quedara configurado para bloquear la O.T. y liberar herramientas al aplicarse.'
+                    : liberaHerramientas === '1'
+                    ? 'El estado quedara configurado para liberar herramientas sin bloquear la O.T.'
+                    : 'Se actualizara el estado con la nueva informacion.',
+                confirmText: 'Si, guardar'
             });
 
             if (!ok) return;
@@ -219,42 +230,35 @@ document.addEventListener('DOMContentLoaded', () => {
             fd.append('id_ai_estado', id);
             fd.append('nombre_estado', nombre);
             fd.append('color', color);
+            fd.append('libera_herramientas', liberaHerramientas);
+            fd.append('bloquea_ot', bloqueaOt);
 
-            const r = await postCrud(fd);
-
-            if (r.ok) {
-                toast('success', r.msg || 'Estado actualizado');
-
-                // ✅ Cierra con Bootstrap y NO borres backdrop con timeout
+            const response = await postCrud(fd);
+            if (response.ok) {
+                toast('success', response.msg || 'Estado actualizado');
                 safeHideModal();
-
-                // ✅ Recarga la lista; la limpieza final ocurre en hidden.bs.modal
                 await refreshEstadoList();
-            } else {
-                toast('error', r.msg || 'No se pudo actualizar');
-                console.error(r);
+                return;
             }
+
+            toast('error', response.msg || 'No se pudo actualizar');
+            console.error(response);
         }, true);
     }
 
-    // =========================================================
-    // Delegación: EDIT/DELETE
-    // =========================================================
-    listContainer.addEventListener('click', async (e) => {
-        const btnDel = e.target.closest('.js-estado-del');
-        const btnEdit = e.target.closest('.js-estado-edit');
+    listContainer.addEventListener('click', async (event) => {
+        const btnDelete = event.target.closest('.js-estado-del');
+        const btnEdit = event.target.closest('.js-estado-edit');
 
-        // DELETE
-        if (btnDel) {
-            e.preventDefault();
-
-            const id = btnDel.getAttribute('data-id');
+        if (btnDelete) {
+            event.preventDefault();
+            const id = btnDelete.getAttribute('data-id');
             if (!id) return;
 
             const ok = await confirmDialog({
-                title: "¿Eliminar estado?",
-                text: "Esta acción eliminará el estado. No se puede deshacer.",
-                confirmText: "Sí, eliminar"
+                title: 'Eliminar estado?',
+                text: 'Esta accion eliminara el estado de forma logica. No se puede deshacer.',
+                confirmText: 'Si, eliminar'
             });
 
             if (!ok) return;
@@ -263,22 +267,20 @@ document.addEventListener('DOMContentLoaded', () => {
             fd.append('action', 'delete');
             fd.append('id_ai_estado', id);
 
-            const r = await postCrud(fd);
-
-            if (r.ok) {
-                toast('success', r.msg || 'Estado eliminado');
+            const response = await postCrud(fd);
+            if (response.ok) {
+                toast('success', response.msg || 'Estado eliminado');
                 await refreshEstadoList();
-            } else {
-                toast('error', r.msg || 'No se pudo eliminar');
-                console.error(r);
+                return;
             }
+
+            toast('error', response.msg || 'No se pudo eliminar');
+            console.error(response);
             return;
         }
 
-        // EDIT
         if (btnEdit) {
-            e.preventDefault();
-
+            event.preventDefault();
             const id = btnEdit.getAttribute('data-id');
             if (!id) return;
 
@@ -286,16 +288,24 @@ document.addEventListener('DOMContentLoaded', () => {
             fd.append('action', 'get');
             fd.append('id_ai_estado', id);
 
-            const r = await postCrud(fd);
+            const response = await postCrud(fd);
+            if (response.ok && response.data) {
+                if (response.data.protegido) {
+                    toast('info', 'Este estado bloquea la O.T. y esta protegido.');
+                    return;
+                }
 
-            if (r.ok && r.data) {
                 const idEl = document.getElementById('edit_id_estado');
                 const nombreEl = document.getElementById('edit_nombre_estado');
                 const colorEl = document.getElementById('edit_color');
+                const liberaEl = document.getElementById('edit_libera_herramientas');
+                const bloqueaEl = document.getElementById('edit_bloquea_ot');
 
-                if (idEl) idEl.value = r.data.id_ai_estado;
-                if (nombreEl) nombreEl.value = r.data.nombre_estado;
-                if (colorEl) colorEl.value = r.data.color || '#00FFCC';
+                if (idEl) idEl.value = response.data.id_ai_estado;
+                if (nombreEl) nombreEl.value = response.data.nombre_estado;
+                if (colorEl) colorEl.value = response.data.color || '#00FFCC';
+                if (liberaEl) liberaEl.checked = Number(response.data.libera_herramientas || 0) === 1;
+                if (bloqueaEl) bloqueaEl.checked = Number(response.data.bloquea_ot || 0) === 1;
 
                 const modalEl = getModalEl();
                 if (!modalEl) {
@@ -303,34 +313,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 if (!window.bootstrap || !bootstrap.Modal) {
-                    toast('error', 'Bootstrap no está disponible (bootstrap.Modal).');
+                    toast('error', 'Bootstrap no esta disponible.');
                     return;
                 }
 
-                const inst = bootstrap.Modal.getOrCreateInstance(modalEl, {
+                const instance = bootstrap.Modal.getOrCreateInstance(modalEl, {
                     backdrop: true,
                     keyboard: true,
                     focus: true
                 });
 
-                inst.show();
-
-                // ✅ si por alguna razón no aparece, lo reponemos
+                instance.show();
                 setTimeout(() => ensureBackdropIfMissing(modalEl), 50);
-            } else {
-                toast('error', r.msg || 'No se pudo cargar el estado');
-                console.error(r);
-                cleanupModalUI();
+                return;
             }
+
+            toast('error', response.msg || 'No se pudo cargar el estado');
+            console.error(response);
+            cleanupModalUI();
         }
     });
 
-    // =========================================================
-    // Recargar manual
-    // =========================================================
     if (btnRecargar) {
-        btnRecargar.addEventListener('click', async (e) => {
-            e.preventDefault();
+        btnRecargar.addEventListener('click', async (event) => {
+            event.preventDefault();
             toast('success', 'Lista recargada');
             await refreshEstadoList();
         });

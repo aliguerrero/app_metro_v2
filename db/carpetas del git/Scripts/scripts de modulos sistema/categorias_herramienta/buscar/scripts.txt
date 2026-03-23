@@ -1,0 +1,24 @@
+Modulo: categorias_herramienta
+Operacion: buscar
+Generado: 2026-03-23 01:06:47
+
+Sentencias SQL vigentes:
+
+SQL [1] - app/controllers/categoriaHerramientaCrud.php
+SELECT id_ai_categoria_herramienta, std_reg
+             FROM categoria_herramienta
+             WHERE nombre_categoria = :nombre
+             LIMIT 1
+
+SQL [2] - app/controllers/categoriaHerramientaCrud.php
+SELECT 1
+             FROM categoria_herramienta
+             WHERE nombre_categoria = :nombre
+               AND id_ai_categoria_herramienta <> :id
+             LIMIT 1
+
+SQL [3] - app/controllers/categoriaHerramientaCrud.php
+SELECT COUNT(1)
+             FROM herramienta
+             WHERE id_ai_categoria_herramienta = :id
+               AND std_reg = 1

@@ -1,6 +1,0 @@
-Modulo: areas
-Operacion: buscar
-
-Sentencias SQL:
-
-SELECT id_ai_area, nombre_area, nomeclatura, std_reg FROM area_trabajo WHERE id_ai_area = :id AND std_reg = 1 LIMIT 1;
