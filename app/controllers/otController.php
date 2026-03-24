@@ -307,7 +307,7 @@ class otController extends mainModel
       "SELECT COALESCE(SUM(cantidadot), 0)
        FROM herramientaot
        WHERE n_ot = :n_ot
-         AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'",
+         AND " . $this->herramientaOtEstadoExpr() . " <> 'LIBERADA'",
       [':n_ot' => $nOt]
     );
 

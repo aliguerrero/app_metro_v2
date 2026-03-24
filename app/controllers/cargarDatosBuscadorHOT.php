@@ -40,6 +40,9 @@ function dbQuery(mainModel $m, string $sql, array $params = [])
 }
 
 $mainModel = new mainModel();
+$estadoHerrCol = $mainModel->herramientaOtEstadoCol();
+$estadoHerrExpr = $mainModel->herramientaOtEstadoExpr();
+$estadoHerrHotExpr = $mainModel->herramientaOtEstadoExpr('hot');
 
 $tipoBusqueda = $mainModel->limpiarCadena($_GET['tipoBusqueda'] ?? '');
 
@@ -91,7 +94,7 @@ if ($tipoBusqueda !== 'eliminar') {
                 FROM herramientaot hot
                 LEFT JOIN herramienta h ON hot.id_ai_herramienta = h.id_ai_herramienta
                 WHERE hot.n_ot = :not
-                  AND COALESCE(hot.estadoot, 'ASIGNADA') <> 'LIBERADA'
+                  AND {$estadoHerrHotExpr} <> 'LIBERADA'
                 GROUP BY hot.n_ot, hot.id_ai_herramienta, h.nombre_herramienta
                 ORDER BY hot.id_ai_herramienta ASC
             ";
@@ -144,7 +147,7 @@ if ($tipoBusqueda !== 'eliminar') {
                 FROM herramientaot hot
                 LEFT JOIN herramienta h ON hot.id_ai_herramienta = h.id_ai_herramienta
                 WHERE hot.n_ot = :not
-                  AND COALESCE(hot.estadoot, 'ASIGNADA') <> 'LIBERADA'
+                  AND {$estadoHerrHotExpr} <> 'LIBERADA'
                   AND (
                         CAST(hot.id_ai_herramienta AS CHAR) LIKE :q
                         OR h.nombre_herramienta LIKE :q
@@ -199,7 +202,7 @@ $sqlExist = "
     SELECT COALESCE(SUM(cantidadot), 0) AS cantidadot
     FROM herramientaot
     WHERE n_ot = :not AND id_ai_herramienta = :idher
-      AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'
+      AND {$estadoHerrExpr} <> 'LIBERADA'
 ";
 $stmtExist = dbQuery($mainModel, $sqlExist, [':not' => $n_ot, ':idher' => $codigoHer]);
 $exist = ($stmtExist && $stmtExist->rowCount() > 0) ? $stmtExist->fetch(PDO::FETCH_ASSOC) : null;
@@ -232,13 +235,13 @@ if ($exist && (int)($exist['cantidadot'] ?? 0) > 0) {
 
     // menos
     if ($cantActual <= 1) {
-        $sqlDel = "DELETE FROM herramientaot WHERE n_ot = :not AND id_ai_herramienta = :idher AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'";
+        $sqlDel = "DELETE FROM herramientaot WHERE n_ot = :not AND id_ai_herramienta = :idher AND {$estadoHerrExpr} <> 'LIBERADA'";
         $stmt = dbQuery($mainModel, $sqlDel, [':not' => $n_ot, ':idher' => $codigoHer]);
         jsonOut(["ok" => (bool)$stmt]);
     }
 
-    dbQuery($mainModel, "DELETE FROM herramientaot WHERE n_ot = :not AND id_ai_herramienta = :idher AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'", [':not' => $n_ot, ':idher' => $codigoHer]);
-    $stmt = dbQuery($mainModel, "INSERT INTO herramientaot (n_ot, id_ai_herramienta, cantidadot, estadoot) VALUES (:not, :idher, :cant, 'ASIGNADA')", [':not' => $n_ot, ':idher' => $codigoHer, ':cant' => ($cantActual - 1)]);
+    dbQuery($mainModel, "DELETE FROM herramientaot WHERE n_ot = :not AND id_ai_herramienta = :idher AND {$estadoHerrExpr} <> 'LIBERADA'", [':not' => $n_ot, ':idher' => $codigoHer]);
+    $stmt = dbQuery($mainModel, "INSERT INTO herramientaot (n_ot, id_ai_herramienta, cantidadot, `{$estadoHerrCol}`) VALUES (:not, :idher, :cant, 'ASIGNADA')", [':not' => $n_ot, ':idher' => $codigoHer, ':cant' => ($cantActual - 1)]);
     jsonOut(["ok" => (bool)$stmt]);
 }
 

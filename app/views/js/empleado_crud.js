@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const URL_CRUD = dir + 'app/controllers/empleadoCrud.php';
     const URL_LIST = dir + 'app/controllers/empleadoList.php';
+    const telefonoRegex = /^(?=(?:\D*\d){10,15}\D*$)[0-9()+ -]{10,20}$/;
 
     const toast = (icon, title) => {
         if (!window.Swal) return;
@@ -71,6 +72,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function validarEmpleadoForm(form) {
+        const idEmpleado = (form.querySelector('[name="id_empleado"]')?.value || '').trim();
+        const nombreEmpleado = (form.querySelector('[name="nombre_empleado"]')?.value || '').trim();
+        const categoria = (form.querySelector('[name="id_ai_categoria_empleado"]')?.value || '').trim();
+        const telefono = (form.querySelector('[name="telefono"]')?.value || '').trim();
+        const correoInput = form.querySelector('[name="correo"]');
+        const correo = (correoInput?.value || '').trim();
+
+        if (!idEmpleado || !nombreEmpleado || !categoria) {
+            toast('warning', 'Completa los datos obligatorios');
+            return false;
+        }
+
+        if (!correo) {
+            toast('warning', 'El correo es obligatorio');
+            correoInput?.focus();
+            return false;
+        }
+
+        if (telefono && !telefonoRegex.test(telefono)) {
+            toast('warning', 'El telefono debe tener entre 10 y 15 digitos validos');
+            form.querySelector('[name="telefono"]')?.focus();
+            return false;
+        }
+
+        if (correoInput && !correoInput.checkValidity()) {
+            correoInput.reportValidity();
+            toast('warning', 'Escribe un correo valido');
+            correoInput.focus();
+            return false;
+        }
+
+        return true;
+    }
+
     [createModalEl, updateModalEl].forEach((modalEl) => {
         if (!modalEl) return;
         modalEl.addEventListener('hidden.bs.modal', () => hardResetModal());
@@ -85,12 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
         event.stopPropagation();
         event.stopImmediatePropagation();
 
-        const idEmpleado = (document.getElementById('id_empleado_create')?.value || '').trim();
-        const nombreEmpleado = (document.getElementById('nombre_empleado_create')?.value || '').trim();
-        const categoria = (document.getElementById('id_ai_categoria_empleado_create')?.value || '').trim();
-
-        if (!idEmpleado || !nombreEmpleado || !categoria) {
-            toast('warning', 'Completa los datos obligatorios');
+        if (!validarEmpleadoForm(formCreate)) {
             return;
         }
 
@@ -122,6 +153,10 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
+
+        if (!validarEmpleadoForm(formUpdate)) {
+            return;
+        }
 
         const ok = await confirmDialog({
             title: 'Guardar cambios?',

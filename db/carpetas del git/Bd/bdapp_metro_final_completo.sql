@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 22-03-2026 a las 22:13:27
--- Versión del servidor: 10.4.32-MariaDB-log
--- Versión de PHP: 8.2.12
+-- Tiempo de generaciÃ³n: 22-03-2026 a las 22:13:27
+-- VersiÃ³n del servidor: 10.4.32-MariaDB-log
+-- VersiÃ³n de PHP: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
@@ -20,10 +20,10 @@ SET time_zone = "+00:00";
 -- BLOQUE 0. BOOTSTRAP DE SEGURIDAD (TOLERANTE A ERRORES)
 -- ----------------------------------------------------------------------------
 -- Objetivo:
--- 1) Crear los roles y usuarios si la sesión actual tiene privilegios globales.
--- 2) No interrumpir la importación si el script se ejecuta con `usr_admin_upt`
+-- 1) Crear los roles y usuarios si la sesiÃ³n actual tiene privilegios globales.
+-- 2) No interrumpir la importaciÃ³n si el script se ejecuta con `usr_admin_upt`
 --    ya existente y sin privilegios globales para CREATE USER / CREATE ROLE.
--- 3) Intentar activar `rol_admin` en la sesión actual cuando ya exista.
+-- 3) Intentar activar `rol_admin` en la sesiÃ³n actual cuando ya exista.
 --
 
 DELIMITER $$
@@ -131,9 +131,9 @@ USE `bdapp_metro`;
 
 CREATE TABLE `area_trabajo` (
   `id_ai_area` int(11) NOT NULL COMMENT 'id autoincrementable',
-  `nombre_area` varchar(100) NOT NULL COMMENT 'Nombre del área de trabajo',
-  `nomeclatura` varchar(20) NOT NULL COMMENT 'Nomenclatura o prefijo usado para generar códigos de OT',
-  `std_reg` tinyint(1) NOT NULL COMMENT 'Estado lógico del registro (1=activo, 0=inactivo/eliminado lógico).'
+  `nombre_area` varchar(100) NOT NULL COMMENT 'Nombre del Ã¡rea de trabajo',
+  `nomeclatura` varchar(20) NOT NULL COMMENT 'Nomenclatura o prefijo usado para generar cÃ³digos de OT',
+  `std_reg` tinyint(1) NOT NULL COMMENT 'Estado lÃ³gico del registro (1=activo, 0=inactivo/eliminado lÃ³gico).'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -463,14 +463,14 @@ DELIMITER ;
 
 CREATE TABLE `detalle_orden` (
   `id_ai_detalle` int(11) NOT NULL COMMENT 'id autoincrementable',
-  `n_ot` varchar(30) NOT NULL COMMENT 'Número único de la orden de trabajo',
+  `n_ot` varchar(30) NOT NULL COMMENT 'NÃºmero Ãºnico de la orden de trabajo',
   `fecha` date NOT NULL COMMENT 'Fecha programada de la orden de trabajo',
-  `descripcion` varchar(250) NOT NULL COMMENT 'Descripción de la actividad o trabajo a realizar',
-  `id_ai_turno` int(11) NOT NULL COMMENT 'Identificador único del turno de trabajo',
+  `descripcion` varchar(250) NOT NULL COMMENT 'DescripciÃ³n de la actividad o trabajo a realizar',
+  `id_ai_turno` int(11) NOT NULL COMMENT 'Identificador Ãºnico del turno de trabajo',
   `id_miembro_cco` varchar(10) NOT NULL COMMENT 'Miembro responsable en CCO (Centro de Control de Operaciones)',
-  `id_user_act` varchar(30) NOT NULL COMMENT 'Usuario técnico responsable de ejecutar la actividad',
+  `id_user_act` varchar(30) NOT NULL COMMENT 'Usuario tÃ©cnico responsable de ejecutar la actividad',
   `id_miembro_ccf` varchar(10) NOT NULL COMMENT 'Miembro responsable en CCF',
-  `cant_tec` int(11) NOT NULL COMMENT 'Cantidad de técnicos involucrados en la actividad',
+  `cant_tec` int(11) NOT NULL COMMENT 'Cantidad de tÃ©cnicos involucrados en la actividad',
   `hora_inicio` time DEFAULT NULL COMMENT 'Hora incio trabajo',
   `hora_fin` time DEFAULT NULL COMMENT 'Hora fin trabajo',
   `observacion` varchar(250) DEFAULT NULL COMMENT 'Observaciones adicionales sobre la actividad'
@@ -705,7 +705,7 @@ CREATE TABLE `empleado` (
   `nombre_empleado` varchar(100) NOT NULL COMMENT 'Nombre completo del empleado',
   `telefono` varchar(20) DEFAULT NULL COMMENT 'Telefono principal del empleado.',
   `direccion` varchar(255) DEFAULT NULL COMMENT 'Direccion de residencia o ubicacion del empleado.',
-  `correo` varchar(120) DEFAULT NULL COMMENT 'Correo electronico del empleado.',
+  `correo` varchar(120) NOT NULL COMMENT 'Correo electronico del empleado.',
   `id_ai_categoria_empleado` int(11) NOT NULL COMMENT 'Categoria asociada al empleado',
   `std_reg` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Estado logico del registro (1=activo, 0=inactivo).'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
@@ -865,15 +865,15 @@ DELIMITER ;
 --
 
 CREATE TABLE `empresa_config` (
-  `id` int(11) NOT NULL COMMENT 'PK. Identificador único de la configuración de empresa (normalmente 1 registro).',
+  `id` int(11) NOT NULL COMMENT 'PK. Identificador Ãºnico de la configuraciÃ³n de empresa (normalmente 1 registro).',
   `nombre` varchar(150) NOT NULL COMMENT 'Nombre legal o comercial de la empresa.',
   `rif` varchar(30) DEFAULT NULL COMMENT 'RIF / Identificador fiscal de la empresa.',
-  `direccion` varchar(255) DEFAULT NULL COMMENT 'Dirección física o fiscal de la empresa.',
-  `telefono` varchar(50) DEFAULT NULL COMMENT 'Teléfono principal de contacto.',
+  `direccion` varchar(255) DEFAULT NULL COMMENT 'DirecciÃ³n fÃ­sica o fiscal de la empresa.',
+  `telefono` varchar(50) DEFAULT NULL COMMENT 'TelÃ©fono principal de contacto.',
   `email` varchar(120) DEFAULT NULL COMMENT 'Correo principal de contacto.',
   `logo` varchar(255) DEFAULT NULL COMMENT 'Ruta relativa del logo. Ej: app/views/icons/metro.png',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Fecha/hora de creación del registro.',
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Fecha/hora de última actualización del registro.'
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Fecha/hora de creaciÃ³n del registro.',
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Fecha/hora de Ãºltima actualizaciÃ³n del registro.'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -881,7 +881,7 @@ CREATE TABLE `empresa_config` (
 --
 
 INSERT INTO `empresa_config` (`id`, `nombre`, `rif`, `direccion`, `telefono`, `email`, `logo`, `created_at`, `updated_at`) VALUES
-(1, 'C.A. Metro Valencia', 'G-0000000-1', 'Av. Sesquicentenaria, local Parque Recreacional Sur, parte Sur Oeste N° S/N, zona Valencia Sur. Estado Carabobo.', '0241-0000000', 'metrodevalencia@correo.com', 'app/views/img/empresa/logo_empresa.jpg', '2026-01-07 20:59:31', '2026-02-11 23:26:46');
+(1, 'C.A. Metro Valencia', 'G-0000000-1', 'Av. Sesquicentenaria, local Parque Recreacional Sur, parte Sur Oeste NÂ° S/N, zona Valencia Sur. Estado Carabobo.', '0241-0000000', 'metrodevalencia@correo.com', 'app/views/img/empresa/logo_empresa.jpg', '2026-01-07 20:59:31', '2026-02-11 23:26:46');
 
 --
 -- Disparadores `empresa_config`
@@ -971,10 +971,10 @@ DELIMITER ;
 CREATE TABLE `estado_ot` (
   `id_ai_estado` int(11) NOT NULL COMMENT 'id autoincrementable',
   `nombre_estado` varchar(100) NOT NULL COMMENT 'Nombre descriptivo del estado de la orden de trabajo',
-  `color` varchar(15) NOT NULL COMMENT 'Código de color asociado al estado para representación visual',
+  `color` varchar(15) NOT NULL COMMENT 'CÃ³digo de color asociado al estado para representaciÃ³n visual',
   `libera_herramientas` tinyint(1) NOT NULL DEFAULT 0,
   `bloquea_ot` tinyint(1) NOT NULL DEFAULT 0,
-  `std_reg` tinyint(1) NOT NULL COMMENT 'Estado lógico del registro (1=activo, 0=inactivo/eliminado lógico).'
+  `std_reg` tinyint(1) NOT NULL COMMENT 'Estado lÃ³gico del registro (1=activo, 0=inactivo/eliminado lÃ³gico).'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -1179,8 +1179,8 @@ CREATE TABLE `herramienta` (
   `nombre_herramienta` varchar(250) NOT NULL COMMENT 'Nombre descriptivo de la herramienta',
   `id_ai_categoria_herramienta` int(10) UNSIGNED NOT NULL COMMENT 'Categoria asociada a la herramienta',
   `cantidad` int(11) NOT NULL COMMENT 'Cantidad total de unidades disponibles de la herramienta',
-  `estado` varchar(5) NOT NULL COMMENT 'Descripción del estado general de la herramienta',
-  `std_reg` tinyint(1) NOT NULL COMMENT 'Estado lógico del registro (1=activo, 0=inactivo/eliminado lógico).'
+  `estado` varchar(5) NOT NULL COMMENT 'DescripciÃ³n del estado general de la herramienta',
+  `std_reg` tinyint(1) NOT NULL COMMENT 'Estado lÃ³gico del registro (1=activo, 0=inactivo/eliminado lÃ³gico).'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -1272,17 +1272,17 @@ DELIMITER ;
 
 CREATE TABLE `herramientaot` (
   `id_ai_herramientaOT` int(11) NOT NULL COMMENT 'id autoincrementable',
-  `id_ai_herramienta` int(11) NOT NULL COMMENT 'Código de la herramienta asignada a la orden de trabajo',
-  `n_ot` varchar(30) NOT NULL COMMENT 'Número único de la orden de trabajo',
+  `id_ai_herramienta` int(11) NOT NULL COMMENT 'CÃ³digo de la herramienta asignada a la orden de trabajo',
+  `n_ot` varchar(30) NOT NULL COMMENT 'NÃºmero Ãºnico de la orden de trabajo',
   `cantidadot` int(11) NOT NULL COMMENT 'Cantidad de unidades de la herramienta asignadas a la OT',
-  `estadoot` varchar(60) NOT NULL DEFAULT 'ASIGNADA' COMMENT 'Estado o condición de la herramienta dentro de la OT'
+  `estado_herramientaot` varchar(60) NOT NULL DEFAULT 'ASIGNADA' COMMENT 'Estado o condiciÃ³n de la herramienta dentro de la OT'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
 -- Volcado de datos para la tabla `herramientaot`
 --
 
-INSERT INTO `herramientaot` (`id_ai_herramientaOT`, `id_ai_herramienta`, `n_ot`, `cantidadot`, `estadoot`) VALUES
+INSERT INTO `herramientaot` (`id_ai_herramientaOT`, `id_ai_herramienta`, `n_ot`, `cantidadot`, `estado_herramientaot`) VALUES
 (1, 4, 'VF-SEN-001', 1, 'ASIGNADA'),
 (2, 5, 'VF-SEN-001', 1, 'ASIGNADA'),
 (3, 10, 'VF-SEN-001', 3, 'ASIGNADA'),
@@ -1318,7 +1318,7 @@ CREATE TRIGGER `trg_herramientaot_ad` AFTER DELETE ON `herramientaot` FOR EACH R
   JSON_OBJECT('id_ai_herramientaOT', OLD.`id_ai_herramientaOT`),
   CONCAT('ELIMINAR ', 'herramientaot'),
   CONCAT('DELETE herramientaot ', CONCAT('id_ai_herramientaOT=', OLD.`id_ai_herramientaOT`)),
-  JSON_OBJECT('id_ai_herramientaOT', OLD.`id_ai_herramientaOT`, 'id_ai_herramienta', OLD.`id_ai_herramienta`, 'n_ot', OLD.`n_ot`, 'cantidadot', OLD.`cantidadot`, 'estadoot', OLD.`estadoot`),
+  JSON_OBJECT('id_ai_herramientaOT', OLD.`id_ai_herramientaOT`, 'id_ai_herramienta', OLD.`id_ai_herramienta`, 'n_ot', OLD.`n_ot`, 'cantidadot', OLD.`cantidadot`, 'estado_herramientaot', OLD.`estado_herramientaot`),
   NULL,
   NULL,
   NULL,
@@ -1344,9 +1344,9 @@ CREATE TRIGGER `trg_herramientaot_ai` AFTER INSERT ON `herramientaot` FOR EACH R
   CONCAT('CREAR ', 'herramientaot'),
   CONCAT('INSERT herramientaot ', CONCAT('id_ai_herramientaOT=', NEW.`id_ai_herramientaOT`)),
   NULL,
-  JSON_OBJECT('id_ai_herramientaOT', NEW.`id_ai_herramientaOT`, 'id_ai_herramienta', NEW.`id_ai_herramienta`, 'n_ot', NEW.`n_ot`, 'cantidadot', NEW.`cantidadot`, 'estadoot', NEW.`estadoot`),
-  JSON_OBJECT('id_ai_herramientaOT', NEW.`id_ai_herramientaOT`, 'id_ai_herramienta', NEW.`id_ai_herramienta`, 'n_ot', NEW.`n_ot`, 'cantidadot', NEW.`cantidadot`, 'estadoot', NEW.`estadoot`),
-  'id_ai_herramientaOT,id_ai_herramienta,n_ot,cantidadot,estadoot',
+  JSON_OBJECT('id_ai_herramientaOT', NEW.`id_ai_herramientaOT`, 'id_ai_herramienta', NEW.`id_ai_herramienta`, 'n_ot', NEW.`n_ot`, 'cantidadot', NEW.`cantidadot`, 'estado_herramientaot', NEW.`estado_herramientaot`),
+  JSON_OBJECT('id_ai_herramientaOT', NEW.`id_ai_herramientaOT`, 'id_ai_herramienta', NEW.`id_ai_herramienta`, 'n_ot', NEW.`n_ot`, 'cantidadot', NEW.`cantidadot`, 'estado_herramientaot', NEW.`estado_herramientaot`),
+  'id_ai_herramientaOT,id_ai_herramienta,n_ot,cantidadot,estado_herramientaot',
   CONNECTION_ID(),
   USER(),
   SUBSTRING_INDEX(USER(),'@',-1)
@@ -1368,10 +1368,10 @@ CREATE TRIGGER `trg_herramientaot_au` AFTER UPDATE ON `herramientaot` FOR EACH R
   JSON_OBJECT('id_ai_herramientaOT', NEW.`id_ai_herramientaOT`),
   CONCAT('MODIFICAR ', 'herramientaot'),
   CONCAT('UPDATE herramientaot ', CONCAT('id_ai_herramientaOT=', NEW.`id_ai_herramientaOT`)),
-  JSON_OBJECT('id_ai_herramientaOT', OLD.`id_ai_herramientaOT`, 'id_ai_herramienta', OLD.`id_ai_herramienta`, 'n_ot', OLD.`n_ot`, 'cantidadot', OLD.`cantidadot`, 'estadoot', OLD.`estadoot`),
-  JSON_OBJECT('id_ai_herramientaOT', NEW.`id_ai_herramientaOT`, 'id_ai_herramienta', NEW.`id_ai_herramienta`, 'n_ot', NEW.`n_ot`, 'cantidadot', NEW.`cantidadot`, 'estadoot', NEW.`estadoot`),
-  JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_OBJECT(), IF(NOT (OLD.`id_ai_herramientaOT` <=> NEW.`id_ai_herramientaOT`), JSON_OBJECT('id_ai_herramientaOT', JSON_ARRAY(OLD.`id_ai_herramientaOT`, NEW.`id_ai_herramientaOT`)), JSON_OBJECT())), IF(NOT (OLD.`id_ai_herramienta` <=> NEW.`id_ai_herramienta`), JSON_OBJECT('id_ai_herramienta', JSON_ARRAY(OLD.`id_ai_herramienta`, NEW.`id_ai_herramienta`)), JSON_OBJECT())), IF(NOT (OLD.`n_ot` <=> NEW.`n_ot`), JSON_OBJECT('n_ot', JSON_ARRAY(OLD.`n_ot`, NEW.`n_ot`)), JSON_OBJECT())), IF(NOT (OLD.`cantidadot` <=> NEW.`cantidadot`), JSON_OBJECT('cantidadot', JSON_ARRAY(OLD.`cantidadot`, NEW.`cantidadot`)), JSON_OBJECT())), IF(NOT (OLD.`estadoot` <=> NEW.`estadoot`), JSON_OBJECT('estadoot', JSON_ARRAY(OLD.`estadoot`, NEW.`estadoot`)), JSON_OBJECT())),
-  NULLIF(CONCAT_WS(',', IF(NOT (OLD.`id_ai_herramientaOT` <=> NEW.`id_ai_herramientaOT`), 'id_ai_herramientaOT', NULL), IF(NOT (OLD.`id_ai_herramienta` <=> NEW.`id_ai_herramienta`), 'id_ai_herramienta', NULL), IF(NOT (OLD.`n_ot` <=> NEW.`n_ot`), 'n_ot', NULL), IF(NOT (OLD.`cantidadot` <=> NEW.`cantidadot`), 'cantidadot', NULL), IF(NOT (OLD.`estadoot` <=> NEW.`estadoot`), 'estadoot', NULL)), ''),
+  JSON_OBJECT('id_ai_herramientaOT', OLD.`id_ai_herramientaOT`, 'id_ai_herramienta', OLD.`id_ai_herramienta`, 'n_ot', OLD.`n_ot`, 'cantidadot', OLD.`cantidadot`, 'estado_herramientaot', OLD.`estado_herramientaot`),
+  JSON_OBJECT('id_ai_herramientaOT', NEW.`id_ai_herramientaOT`, 'id_ai_herramienta', NEW.`id_ai_herramienta`, 'n_ot', NEW.`n_ot`, 'cantidadot', NEW.`cantidadot`, 'estado_herramientaot', NEW.`estado_herramientaot`),
+  JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_MERGE_PATCH(JSON_OBJECT(), IF(NOT (OLD.`id_ai_herramientaOT` <=> NEW.`id_ai_herramientaOT`), JSON_OBJECT('id_ai_herramientaOT', JSON_ARRAY(OLD.`id_ai_herramientaOT`, NEW.`id_ai_herramientaOT`)), JSON_OBJECT())), IF(NOT (OLD.`id_ai_herramienta` <=> NEW.`id_ai_herramienta`), JSON_OBJECT('id_ai_herramienta', JSON_ARRAY(OLD.`id_ai_herramienta`, NEW.`id_ai_herramienta`)), JSON_OBJECT())), IF(NOT (OLD.`n_ot` <=> NEW.`n_ot`), JSON_OBJECT('n_ot', JSON_ARRAY(OLD.`n_ot`, NEW.`n_ot`)), JSON_OBJECT())), IF(NOT (OLD.`cantidadot` <=> NEW.`cantidadot`), JSON_OBJECT('cantidadot', JSON_ARRAY(OLD.`cantidadot`, NEW.`cantidadot`)), JSON_OBJECT())), IF(NOT (OLD.`estado_herramientaot` <=> NEW.`estado_herramientaot`), JSON_OBJECT('estado_herramientaot', JSON_ARRAY(OLD.`estado_herramientaot`, NEW.`estado_herramientaot`)), JSON_OBJECT())),
+  NULLIF(CONCAT_WS(',', IF(NOT (OLD.`id_ai_herramientaOT` <=> NEW.`id_ai_herramientaOT`), 'id_ai_herramientaOT', NULL), IF(NOT (OLD.`id_ai_herramienta` <=> NEW.`id_ai_herramienta`), 'id_ai_herramienta', NULL), IF(NOT (OLD.`n_ot` <=> NEW.`n_ot`), 'n_ot', NULL), IF(NOT (OLD.`cantidadot` <=> NEW.`cantidadot`), 'cantidadot', NULL), IF(NOT (OLD.`estado_herramientaot` <=> NEW.`estado_herramientaot`), 'estado_herramientaot', NULL)), ''),
   CONNECTION_ID(),
   USER(),
   SUBSTRING_INDEX(USER(),'@',-1)
@@ -1390,18 +1390,18 @@ CREATE TABLE `log_user` (
   `event_uuid` char(36) NOT NULL COMMENT 'Identificador unico del evento de auditoria.',
   `id_user` varchar(30) DEFAULT NULL COMMENT 'Identificador de user (FK o referencia).',
   `tabla` varchar(64) NOT NULL COMMENT 'Tabla origen del evento.',
-  `operacion` enum('INSERT','UPDATE','DELETE','SOFT_DELETE','RESTORE','UNKNOWN') NOT NULL COMMENT 'Tipo de operación registrada.',
+  `operacion` enum('INSERT','UPDATE','DELETE','SOFT_DELETE','RESTORE','UNKNOWN') NOT NULL COMMENT 'Tipo de operaciÃ³n registrada.',
   `pk_registro` varchar(255) DEFAULT NULL COMMENT 'Clave primaria (o identificador) del registro afectado.',
   `pk_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'Identificador/PK en formato JSON.' CHECK (json_valid(`pk_json`)),
   `accion` varchar(150) NOT NULL COMMENT 'Accion funcional mostrada al usuario o al sistema.',
-  `resp_system` text NOT NULL COMMENT 'Detalle técnico de la operación registrada.',
+  `resp_system` text NOT NULL COMMENT 'Detalle tÃ©cnico de la operaciÃ³n registrada.',
   `data_old` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'Snapshot anterior (UPDATE/DELETE).' CHECK (json_valid(`data_old`)),
   `data_new` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'Snapshot posterior (INSERT/UPDATE).' CHECK (json_valid(`data_new`)),
   `data_diff` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'Solo campos modificados con [old,new].' CHECK (json_valid(`data_diff`)),
   `fecha_hora` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Fecha asociada a fecha hora.',
-  `connection_id` bigint(20) UNSIGNED DEFAULT NULL COMMENT 'CONNECTION_ID() de la sesión.',
-  `db_user` varchar(128) NOT NULL COMMENT 'Usuario de base de datos que ejecutó la operación.',
-  `db_host` varchar(128) DEFAULT NULL COMMENT 'Host extraído de USER().',
+  `connection_id` bigint(20) UNSIGNED DEFAULT NULL COMMENT 'CONNECTION_ID() de la sesiÃ³n.',
+  `db_user` varchar(128) NOT NULL COMMENT 'Usuario de base de datos que ejecutÃ³ la operaciÃ³n.',
+  `db_host` varchar(128) DEFAULT NULL COMMENT 'Host extraÃ­do de USER().',
   `changed_cols` varchar(1024) DEFAULT NULL COMMENT 'Lista CSV de columnas modificadas.',
   `std_reg` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Estado logico del registro'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
@@ -1416,7 +1416,7 @@ $$
 DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `trg_log_user_no_update` BEFORE UPDATE ON `log_user` FOR EACH ROW SIGNAL SQLSTATE '45000'
-  SET MESSAGE_TEXT = 'No se permite modificar registros de auditoría (log_user).'
+  SET MESSAGE_TEXT = 'No se permite modificar registros de auditorÃ­a (log_user).'
 $$
 DELIMITER ;
 
@@ -1428,11 +1428,11 @@ DELIMITER ;
 
 CREATE TABLE `miembro` (
   `id_ai_miembro` int(11) NOT NULL COMMENT 'id autoincrementable',
-  `id_miembro` varchar(10) NOT NULL COMMENT 'Identificador único del miembro',
+  `id_miembro` varchar(10) NOT NULL COMMENT 'Identificador Ãºnico del miembro',
   `id_empleado` varchar(30) DEFAULT NULL,
   `nombre_miembro` varchar(40) NOT NULL COMMENT 'Nombre completo del miembro',
   `tipo_miembro` int(11) NOT NULL COMMENT 'Tipo de miembro (por ejemplo, CCO, CCF, etc.)',
-  `std_reg` tinyint(1) NOT NULL COMMENT 'Estado lógico del registro (1=activo, 0=inactivo/eliminado lógico).'
+  `std_reg` tinyint(1) NOT NULL COMMENT 'Estado lÃ³gico del registro (1=activo, 0=inactivo/eliminado lÃ³gico).'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -1516,19 +1516,19 @@ DELIMITER ;
 
 CREATE TABLE `orden_trabajo` (
   `id_ai_ot` int(11) NOT NULL COMMENT 'id autoincrementable',
-  `n_ot` varchar(30) NOT NULL COMMENT 'Número único de la orden de trabajo',
-  `id_ai_area` int(11) NOT NULL COMMENT 'Área de trabajo responsable de la orden',
-  `id_user` varchar(30) NOT NULL COMMENT 'Identificador único del usuario del sistema',
-  `id_ai_sitio` int(11) NOT NULL COMMENT 'Identificador único del sitio de trabajo',
+  `n_ot` varchar(30) NOT NULL COMMENT 'NÃºmero Ãºnico de la orden de trabajo',
+  `id_ai_area` int(11) NOT NULL COMMENT 'Ãrea de trabajo responsable de la orden',
+  `id_user` varchar(30) NOT NULL COMMENT 'Identificador Ãºnico del usuario del sistema',
+  `id_ai_sitio` int(11) NOT NULL COMMENT 'Identificador Ãºnico del sitio de trabajo',
   `id_ai_estado` int(11) NOT NULL COMMENT 'Estado operativo actual de la orden de trabajo',
-  `nombre_trab` varchar(500) NOT NULL COMMENT 'Descripción o nombre del trabajo a realizar',
+  `nombre_trab` varchar(500) NOT NULL COMMENT 'DescripciÃ³n o nombre del trabajo a realizar',
   `fecha` date NOT NULL COMMENT 'Fecha programada de la orden de trabajo',
-  `semana` varchar(100) NOT NULL COMMENT 'Semana del año correspondiente a la orden',
+  `semana` varchar(100) NOT NULL COMMENT 'Semana del aÃ±o correspondiente a la orden',
   `mes` varchar(100) NOT NULL COMMENT 'Mes correspondiente a la orden de trabajo',
   `ot_finalizada` tinyint(1) NOT NULL DEFAULT 0,
   `fecha_finalizacion` datetime DEFAULT NULL,
   `id_user_finaliza` varchar(30) DEFAULT NULL,
-  `std_reg` tinyint(1) NOT NULL COMMENT 'Estado lógico del registro (1=activo, 0=inactivo/eliminado lógico).'
+  `std_reg` tinyint(1) NOT NULL COMMENT 'Estado lÃ³gico del registro (1=activo, 0=inactivo/eliminado lÃ³gico).'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -1938,13 +1938,13 @@ CREATE TABLE `roles_permisos` (
   `perm_miembro_add` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Permiso para registrar nuevos miembros',
   `perm_miembro_edit` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Permiso para editar miembros',
   `perm_miembro_delete` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Permiso para eliminar miembros',
-  `perm_ot_view` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Permiso para visualizar órdenes de trabajo',
-  `perm_ot_add` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Permiso para registrar nuevas órdenes de trabajo',
-  `perm_ot_edit` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Permiso para editar órdenes de trabajo',
-  `perm_ot_delete` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Permiso para eliminar órdenes de trabajo',
-  `perm_ot_add_detalle` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Permiso para agregar detalles a órdenes de trabajo',
-  `perm_ot_generar_reporte` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Permiso para generar reportes de órdenes de trabajo',
-  `perm_ot_add_herramienta` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Permiso para asociar herramientas a órdenes de trabajo'
+  `perm_ot_view` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Permiso para visualizar Ã³rdenes de trabajo',
+  `perm_ot_add` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Permiso para registrar nuevas Ã³rdenes de trabajo',
+  `perm_ot_edit` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Permiso para editar Ã³rdenes de trabajo',
+  `perm_ot_delete` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Permiso para eliminar Ã³rdenes de trabajo',
+  `perm_ot_add_detalle` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Permiso para agregar detalles a Ã³rdenes de trabajo',
+  `perm_ot_generar_reporte` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Permiso para generar reportes de Ã³rdenes de trabajo',
+  `perm_ot_add_herramienta` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Permiso para asociar herramientas a Ã³rdenes de trabajo'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -2043,8 +2043,8 @@ DELIMITER ;
 
 CREATE TABLE `sitio_trabajo` (
   `id_ai_sitio` int(11) NOT NULL COMMENT 'id autoincrementable',
-  `nombre_sitio` varchar(100) NOT NULL COMMENT 'Nombre del sitio o ubicación de trabajo',
-  `std_reg` tinyint(1) NOT NULL COMMENT 'Estado lógico del registro (1=activo, 0=inactivo/eliminado lógico).'
+  `nombre_sitio` varchar(100) NOT NULL COMMENT 'Nombre del sitio o ubicaciÃ³n de trabajo',
+  `std_reg` tinyint(1) NOT NULL COMMENT 'Estado lÃ³gico del registro (1=activo, 0=inactivo/eliminado lÃ³gico).'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -2154,7 +2154,7 @@ INSERT INTO `smtp_config` (`id`, `enabled`, `provider`, `host`, `port`, `encrypt
 CREATE TABLE `turno_trabajo` (
   `id_ai_turno` int(11) NOT NULL COMMENT 'id autoincrementable',
   `nombre_turno` varchar(100) NOT NULL COMMENT 'Nombre descriptivo del turno de trabajo',
-  `std_reg` tinyint(1) NOT NULL COMMENT 'Estado lógico del registro (1=activo, 0=inactivo/eliminado lógico).'
+  `std_reg` tinyint(1) NOT NULL COMMENT 'Estado lÃ³gico del registro (1=activo, 0=inactivo/eliminado lÃ³gico).'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -2235,8 +2235,8 @@ DELIMITER ;
 CREATE TABLE `user_system` (
   `id_ai_user` int(11) NOT NULL COMMENT 'id autoincrementable',
   `id_empleado` varchar(30) NOT NULL COMMENT 'Identificador del empleado asociado al usuario del sistema',
-  `username` varchar(50) NOT NULL COMMENT 'Nombre de usuario utilizado para iniciar sesión',
-  `password` varchar(60) NOT NULL COMMENT 'Contraseña encriptada del usuario',
+  `username` varchar(50) NOT NULL COMMENT 'Nombre de usuario utilizado para iniciar sesiÃ³n',
+  `password` varchar(60) NOT NULL COMMENT 'ContraseÃ±a encriptada del usuario',
   `failed_login_attempts` smallint(5) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Intentos fallidos consecutivos de login',
   `account_locked` tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=cuenta bloqueada por seguridad',
   `locked_at` datetime DEFAULT NULL COMMENT 'Fecha/hora de bloqueo de la cuenta',
@@ -2244,7 +2244,7 @@ CREATE TABLE `user_system` (
   `last_login_at` datetime DEFAULT NULL COMMENT 'Ultimo inicio de sesion exitoso',
   `last_login_ip` varchar(45) DEFAULT NULL COMMENT 'IP del ultimo inicio de sesion exitoso',
   `tipo` int(11) NOT NULL COMMENT 'Rol o perfil de permisos asociado al usuario',
-  `std_reg` tinyint(1) NOT NULL COMMENT 'Estado lógico del registro (1=activo, 0=inactivo/eliminado lógico).'
+  `std_reg` tinyint(1) NOT NULL COMMENT 'Estado lÃ³gico del registro (1=activo, 0=inactivo/eliminado lÃ³gico).'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -2319,7 +2319,7 @@ DELIMITER ;
 
 --
 -- Estructura Stand-in para la vista `vw_herramientas_ocupadas`
--- (Véase abajo para la vista actual)
+-- (VÃ©ase abajo para la vista actual)
 --
 CREATE TABLE `vw_herramientas_ocupadas` (
 `id_ai_herramientaOT` int(11)
@@ -2334,7 +2334,7 @@ CREATE TABLE `vw_herramientas_ocupadas` (
 ,`telefono` varchar(20)
 ,`correo` varchar(120)
 ,`direccion` varchar(255)
-,`estadoot` varchar(60)
+,`estado_herramientaot` varchar(60)
 ,`fecha_ot` date
 );
 
@@ -2342,7 +2342,7 @@ CREATE TABLE `vw_herramientas_ocupadas` (
 
 --
 -- Estructura Stand-in para la vista `vw_herramienta_disponibilidad`
--- (Véase abajo para la vista actual)
+-- (VÃ©ase abajo para la vista actual)
 --
 CREATE TABLE `vw_herramienta_disponibilidad` (
 `id_ai_herramienta` int(11)
@@ -2361,7 +2361,7 @@ CREATE TABLE `vw_herramienta_disponibilidad` (
 
 --
 -- Estructura Stand-in para la vista `vw_log_user_resumen`
--- (Véase abajo para la vista actual)
+-- (VÃ©ase abajo para la vista actual)
 --
 CREATE TABLE `vw_log_user_resumen` (
 `id_log` bigint(20) unsigned
@@ -2382,7 +2382,7 @@ CREATE TABLE `vw_log_user_resumen` (
 
 --
 -- Estructura Stand-in para la vista `vw_ot_detallada`
--- (Véase abajo para la vista actual)
+-- (VÃ©ase abajo para la vista actual)
 --
 CREATE TABLE `vw_ot_detallada` (
 `id_ai_detalle` int(11)
@@ -2424,7 +2424,7 @@ CREATE TABLE `vw_ot_detallada` (
 
 --
 -- Estructura Stand-in para la vista `vw_ot_resumen`
--- (Véase abajo para la vista actual)
+-- (VÃ©ase abajo para la vista actual)
 --
 CREATE TABLE `vw_ot_resumen` (
 `id_ai_ot` int(11)
@@ -2461,7 +2461,7 @@ CREATE TABLE `vw_ot_resumen` (
 
 --
 -- Estructura Stand-in para la vista `vw_reportes_generados`
--- (Véase abajo para la vista actual)
+-- (VÃ©ase abajo para la vista actual)
 --
 CREATE TABLE `vw_reportes_generados` (
 `id_ai_reporte_generado` int(10) unsigned
@@ -2487,7 +2487,7 @@ CREATE TABLE `vw_reportes_generados` (
 
 --
 -- Estructura Stand-in para la vista `vw_usuario_empleado`
--- (Véase abajo para la vista actual)
+-- (VÃ©ase abajo para la vista actual)
 --
 CREATE TABLE `vw_usuario_empleado` (
 `id_ai_user` int(11)
@@ -2519,7 +2519,7 @@ CREATE TABLE `vw_usuario_empleado` (
 DROP VIEW IF EXISTS `vw_herramientas_ocupadas`;
 DROP TABLE IF EXISTS `vw_herramientas_ocupadas`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=CURRENT_USER SQL SECURITY INVOKER VIEW `vw_herramientas_ocupadas`  AS SELECT `hot`.`id_ai_herramientaOT` AS `id_ai_herramientaOT`, `hot`.`id_ai_herramienta` AS `id_ai_herramienta`, `h`.`nombre_herramienta` AS `nombre_herramienta`, `hot`.`n_ot` AS `n_ot`, `ot`.`nombre_trab` AS `nombre_trab`, `hot`.`cantidadot` AS `cantidadot`, coalesce(`eo`.`nombre_estado`,'SIN ESTADO') AS `estado_ot`, coalesce(`det`.`id_user_act`,`ot`.`id_user`,'') AS `tecnico_id`, coalesce(`emp_det`.`nombre_empleado`,`emp_ot`.`nombre_empleado`,'Sin tecnico asignado') AS `tecnico_nombre`, coalesce(`emp_det`.`telefono`,`emp_ot`.`telefono`,'') AS `telefono`, coalesce(`emp_det`.`correo`,`emp_ot`.`correo`,'') AS `correo`, coalesce(`emp_det`.`direccion`,`emp_ot`.`direccion`,'') AS `direccion`, `hot`.`estadoot` AS `estadoot`, `ot`.`fecha` AS `fecha_ot` FROM ((((((`herramientaot` `hot` join `herramienta` `h` on(`h`.`id_ai_herramienta` = `hot`.`id_ai_herramienta` and `h`.`std_reg` = 1)) join `orden_trabajo` `ot` on(`ot`.`n_ot` = `hot`.`n_ot` and `ot`.`std_reg` = 1)) left join `estado_ot` `eo` on(`eo`.`id_ai_estado` = `ot`.`id_ai_estado`)) left join (select `d1`.`n_ot` AS `n_ot`,`d1`.`id_user_act` AS `id_user_act` from (`detalle_orden` `d1` join (select `detalle_orden`.`n_ot` AS `n_ot`,max(`detalle_orden`.`id_ai_detalle`) AS `max_id` from `detalle_orden` group by `detalle_orden`.`n_ot`) `d2` on(`d2`.`n_ot` = `d1`.`n_ot` and `d2`.`max_id` = `d1`.`id_ai_detalle`))) `det` on(`det`.`n_ot` = `hot`.`n_ot`)) left join `empleado` `emp_det` on(`emp_det`.`id_empleado` = `det`.`id_user_act` and `emp_det`.`std_reg` = 1)) left join `empleado` `emp_ot` on(`emp_ot`.`id_empleado` = `ot`.`id_user` and `emp_ot`.`std_reg` = 1)) WHERE coalesce(`hot`.`estadoot`,'ASIGNADA') <> 'LIBERADA' ;
+CREATE ALGORITHM=UNDEFINED DEFINER=CURRENT_USER SQL SECURITY INVOKER VIEW `vw_herramientas_ocupadas`  AS SELECT `hot`.`id_ai_herramientaOT` AS `id_ai_herramientaOT`, `hot`.`id_ai_herramienta` AS `id_ai_herramienta`, `h`.`nombre_herramienta` AS `nombre_herramienta`, `hot`.`n_ot` AS `n_ot`, `ot`.`nombre_trab` AS `nombre_trab`, `hot`.`cantidadot` AS `cantidadot`, coalesce(`eo`.`nombre_estado`,'SIN ESTADO') AS `estado_ot`, coalesce(`det`.`id_user_act`,`ot`.`id_user`,'') AS `tecnico_id`, coalesce(`emp_det`.`nombre_empleado`,`emp_ot`.`nombre_empleado`,'Sin tecnico asignado') AS `tecnico_nombre`, coalesce(`emp_det`.`telefono`,`emp_ot`.`telefono`,'') AS `telefono`, coalesce(`emp_det`.`correo`,`emp_ot`.`correo`,'') AS `correo`, coalesce(`emp_det`.`direccion`,`emp_ot`.`direccion`,'') AS `direccion`, `hot`.`estado_herramientaot` AS `estado_herramientaot`, `ot`.`fecha` AS `fecha_ot` FROM ((((((`herramientaot` `hot` join `herramienta` `h` on(`h`.`id_ai_herramienta` = `hot`.`id_ai_herramienta` and `h`.`std_reg` = 1)) join `orden_trabajo` `ot` on(`ot`.`n_ot` = `hot`.`n_ot` and `ot`.`std_reg` = 1)) left join `estado_ot` `eo` on(`eo`.`id_ai_estado` = `ot`.`id_ai_estado`)) left join (select `d1`.`n_ot` AS `n_ot`,`d1`.`id_user_act` AS `id_user_act` from (`detalle_orden` `d1` join (select `detalle_orden`.`n_ot` AS `n_ot`,max(`detalle_orden`.`id_ai_detalle`) AS `max_id` from `detalle_orden` group by `detalle_orden`.`n_ot`) `d2` on(`d2`.`n_ot` = `d1`.`n_ot` and `d2`.`max_id` = `d1`.`id_ai_detalle`))) `det` on(`det`.`n_ot` = `hot`.`n_ot`)) left join `empleado` `emp_det` on(`emp_det`.`id_empleado` = `det`.`id_user_act` and `emp_det`.`std_reg` = 1)) left join `empleado` `emp_ot` on(`emp_ot`.`id_empleado` = `ot`.`id_user` and `emp_ot`.`std_reg` = 1)) WHERE coalesce(`hot`.`estado_herramientaot`,'ASIGNADA') <> 'LIBERADA' ;
 
 -- --------------------------------------------------------
 
@@ -2529,7 +2529,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=CURRENT_USER SQL SECURITY INVOKER VIEW `vw_he
 DROP VIEW IF EXISTS `vw_herramienta_disponibilidad`;
 DROP TABLE IF EXISTS `vw_herramienta_disponibilidad`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=CURRENT_USER SQL SECURITY INVOKER VIEW `vw_herramienta_disponibilidad`  AS SELECT `h`.`id_ai_herramienta` AS `id_ai_herramienta`, `h`.`nombre_herramienta` AS `nombre_herramienta`, `h`.`id_ai_categoria_herramienta` AS `id_ai_categoria_herramienta`, `ch`.`nombre_categoria` AS `nombre_categoria`, `h`.`cantidad` AS `cantidad_total`, coalesce(`occ`.`cantidad_ocupada`,0) AS `cantidad_ocupada`, greatest(`h`.`cantidad` - coalesce(`occ`.`cantidad_ocupada`,0),0) AS `cantidad_disponible`, coalesce(`occ`.`ots_activas`,0) AS `ots_activas`, `h`.`estado` AS `estado`, `h`.`std_reg` AS `std_reg` FROM ((`herramienta` `h` left join `categoria_herramienta` `ch` on(`ch`.`id_ai_categoria_herramienta` = `h`.`id_ai_categoria_herramienta`)) left join (select `hot`.`id_ai_herramienta` AS `id_ai_herramienta`,coalesce(sum(case when coalesce(`hot`.`estadoot`,'ASIGNADA') <> 'LIBERADA' then `hot`.`cantidadot` else 0 end),0) AS `cantidad_ocupada`,count(distinct case when coalesce(`hot`.`estadoot`,'ASIGNADA') <> 'LIBERADA' then `hot`.`n_ot` end) AS `ots_activas` from `herramientaot` `hot` group by `hot`.`id_ai_herramienta`) `occ` on(`occ`.`id_ai_herramienta` = `h`.`id_ai_herramienta`)) WHERE `h`.`std_reg` = 1 ;
+CREATE ALGORITHM=UNDEFINED DEFINER=CURRENT_USER SQL SECURITY INVOKER VIEW `vw_herramienta_disponibilidad`  AS SELECT `h`.`id_ai_herramienta` AS `id_ai_herramienta`, `h`.`nombre_herramienta` AS `nombre_herramienta`, `h`.`id_ai_categoria_herramienta` AS `id_ai_categoria_herramienta`, `ch`.`nombre_categoria` AS `nombre_categoria`, `h`.`cantidad` AS `cantidad_total`, coalesce(`occ`.`cantidad_ocupada`,0) AS `cantidad_ocupada`, greatest(`h`.`cantidad` - coalesce(`occ`.`cantidad_ocupada`,0),0) AS `cantidad_disponible`, coalesce(`occ`.`ots_activas`,0) AS `ots_activas`, `h`.`estado` AS `estado`, `h`.`std_reg` AS `std_reg` FROM ((`herramienta` `h` left join `categoria_herramienta` `ch` on(`ch`.`id_ai_categoria_herramienta` = `h`.`id_ai_categoria_herramienta`)) left join (select `hot`.`id_ai_herramienta` AS `id_ai_herramienta`,coalesce(sum(case when coalesce(`hot`.`estado_herramientaot`,'ASIGNADA') <> 'LIBERADA' then `hot`.`cantidadot` else 0 end),0) AS `cantidad_ocupada`,count(distinct case when coalesce(`hot`.`estado_herramientaot`,'ASIGNADA') <> 'LIBERADA' then `hot`.`n_ot` end) AS `ots_activas` from `herramientaot` `hot` group by `hot`.`id_ai_herramienta`) `occ` on(`occ`.`id_ai_herramienta` = `h`.`id_ai_herramienta`)) WHERE `h`.`std_reg` = 1 ;
 
 -- --------------------------------------------------------
 
@@ -2559,7 +2559,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=CURRENT_USER SQL SECURITY INVOKER VIEW `vw_ot
 DROP VIEW IF EXISTS `vw_ot_resumen`;
 DROP TABLE IF EXISTS `vw_ot_resumen`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=CURRENT_USER SQL SECURITY INVOKER VIEW `vw_ot_resumen`  AS SELECT `ot`.`id_ai_ot` AS `id_ai_ot`, `ot`.`n_ot` AS `n_ot`, `ot`.`fecha` AS `fecha`, `ot`.`semana` AS `semana`, `ot`.`mes` AS `mes`, `ot`.`nombre_trab` AS `nombre_trab`, `ot`.`id_ai_area` AS `id_ai_area`, `area`.`nombre_area` AS `nombre_area`, `area`.`nomeclatura` AS `area_nomeclatura`, `ot`.`id_ai_sitio` AS `id_ai_sitio`, `sitio`.`nombre_sitio` AS `nombre_sitio`, `ot`.`id_ai_estado` AS `id_ai_estado`, `eo`.`nombre_estado` AS `nombre_estado`, `eo`.`color` AS `color_estado`, coalesce(`eo`.`libera_herramientas`,0) AS `libera_herramientas`, coalesce(`eo`.`bloquea_ot`,0) AS `bloquea_ot`, coalesce(`ot`.`ot_finalizada`,0) AS `ot_finalizada`, `ot`.`fecha_finalizacion` AS `fecha_finalizacion`, `ot`.`id_user_finaliza` AS `id_user_finaliza`, `ot`.`id_user` AS `id_user_responsable`, `us`.`username` AS `username_responsable`, `emp`.`nombre_empleado` AS `empleado_responsable`, `emp`.`telefono` AS `telefono_responsable`, `emp`.`correo` AS `correo_responsable`, coalesce(`det`.`total_detalles`,0) AS `total_detalles`, coalesce(`hot`.`herramientas_asignadas`,0) AS `herramientas_asignadas`, coalesce(`hot`.`herramientas_activas`,0) AS `herramientas_activas`, `ot`.`std_reg` AS `std_reg` FROM (((((((`orden_trabajo` `ot` left join `area_trabajo` `area` on(`area`.`id_ai_area` = `ot`.`id_ai_area`)) left join `sitio_trabajo` `sitio` on(`sitio`.`id_ai_sitio` = `ot`.`id_ai_sitio`)) left join `estado_ot` `eo` on(`eo`.`id_ai_estado` = `ot`.`id_ai_estado`)) left join `user_system` `us` on(`us`.`id_empleado` = `ot`.`id_user`)) left join `empleado` `emp` on(`emp`.`id_empleado` = `ot`.`id_user`)) left join (select `detalle_orden`.`n_ot` AS `n_ot`,count(0) AS `total_detalles` from `detalle_orden` group by `detalle_orden`.`n_ot`) `det` on(`det`.`n_ot` = `ot`.`n_ot`)) left join (select `herramientaot`.`n_ot` AS `n_ot`,coalesce(sum(`herramientaot`.`cantidadot`),0) AS `herramientas_asignadas`,coalesce(sum(case when coalesce(`herramientaot`.`estadoot`,'ASIGNADA') <> 'LIBERADA' then `herramientaot`.`cantidadot` else 0 end),0) AS `herramientas_activas` from `herramientaot` group by `herramientaot`.`n_ot`) `hot` on(`hot`.`n_ot` = `ot`.`n_ot`)) WHERE `ot`.`std_reg` = 1 ;
+CREATE ALGORITHM=UNDEFINED DEFINER=CURRENT_USER SQL SECURITY INVOKER VIEW `vw_ot_resumen`  AS SELECT `ot`.`id_ai_ot` AS `id_ai_ot`, `ot`.`n_ot` AS `n_ot`, `ot`.`fecha` AS `fecha`, `ot`.`semana` AS `semana`, `ot`.`mes` AS `mes`, `ot`.`nombre_trab` AS `nombre_trab`, `ot`.`id_ai_area` AS `id_ai_area`, `area`.`nombre_area` AS `nombre_area`, `area`.`nomeclatura` AS `area_nomeclatura`, `ot`.`id_ai_sitio` AS `id_ai_sitio`, `sitio`.`nombre_sitio` AS `nombre_sitio`, `ot`.`id_ai_estado` AS `id_ai_estado`, `eo`.`nombre_estado` AS `nombre_estado`, `eo`.`color` AS `color_estado`, coalesce(`eo`.`libera_herramientas`,0) AS `libera_herramientas`, coalesce(`eo`.`bloquea_ot`,0) AS `bloquea_ot`, coalesce(`ot`.`ot_finalizada`,0) AS `ot_finalizada`, `ot`.`fecha_finalizacion` AS `fecha_finalizacion`, `ot`.`id_user_finaliza` AS `id_user_finaliza`, `ot`.`id_user` AS `id_user_responsable`, `us`.`username` AS `username_responsable`, `emp`.`nombre_empleado` AS `empleado_responsable`, `emp`.`telefono` AS `telefono_responsable`, `emp`.`correo` AS `correo_responsable`, coalesce(`det`.`total_detalles`,0) AS `total_detalles`, coalesce(`hot`.`herramientas_asignadas`,0) AS `herramientas_asignadas`, coalesce(`hot`.`herramientas_activas`,0) AS `herramientas_activas`, `ot`.`std_reg` AS `std_reg` FROM (((((((`orden_trabajo` `ot` left join `area_trabajo` `area` on(`area`.`id_ai_area` = `ot`.`id_ai_area`)) left join `sitio_trabajo` `sitio` on(`sitio`.`id_ai_sitio` = `ot`.`id_ai_sitio`)) left join `estado_ot` `eo` on(`eo`.`id_ai_estado` = `ot`.`id_ai_estado`)) left join `user_system` `us` on(`us`.`id_empleado` = `ot`.`id_user`)) left join `empleado` `emp` on(`emp`.`id_empleado` = `ot`.`id_user`)) left join (select `detalle_orden`.`n_ot` AS `n_ot`,count(0) AS `total_detalles` from `detalle_orden` group by `detalle_orden`.`n_ot`) `det` on(`det`.`n_ot` = `ot`.`n_ot`)) left join (select `herramientaot`.`n_ot` AS `n_ot`,coalesce(sum(`herramientaot`.`cantidadot`),0) AS `herramientas_asignadas`,coalesce(sum(case when coalesce(`herramientaot`.`estado_herramientaot`,'ASIGNADA') <> 'LIBERADA' then `herramientaot`.`cantidadot` else 0 end),0) AS `herramientas_activas` from `herramientaot` group by `herramientaot`.`n_ot`) `hot` on(`hot`.`n_ot` = `ot`.`n_ot`)) WHERE `ot`.`std_reg` = 1 ;
 
 -- --------------------------------------------------------
 
@@ -2582,7 +2582,7 @@ DROP TABLE IF EXISTS `vw_usuario_empleado`;
 CREATE ALGORITHM=UNDEFINED DEFINER=CURRENT_USER SQL SECURITY INVOKER VIEW `vw_usuario_empleado`  AS SELECT `us`.`id_ai_user` AS `id_ai_user`, `us`.`id_empleado` AS `id_empleado`, `us`.`username` AS `username`, `us`.`tipo` AS `id_rol`, `rp`.`nombre_rol` AS `nombre_rol`, `us`.`failed_login_attempts` AS `failed_login_attempts`, `us`.`account_locked` AS `account_locked`, `us`.`locked_at` AS `locked_at`, `us`.`password_reset_required` AS `password_reset_required`, `us`.`last_login_at` AS `last_login_at`, `us`.`last_login_ip` AS `last_login_ip`, `us`.`std_reg` AS `std_reg`, `emp`.`nacionalidad` AS `nacionalidad`, `emp`.`nombre_empleado` AS `nombre_empleado`, `emp`.`telefono` AS `telefono`, `emp`.`correo` AS `correo`, `emp`.`direccion` AS `direccion`, `emp`.`id_ai_categoria_empleado` AS `id_ai_categoria_empleado`, `ce`.`nombre_categoria` AS `categoria_empleado` FROM (((`user_system` `us` left join `empleado` `emp` on(`emp`.`id_empleado` = `us`.`id_empleado`)) left join `categoria_empleado` `ce` on(`ce`.`id_ai_categoria_empleado` = `emp`.`id_ai_categoria_empleado`)) left join `roles_permisos` `rp` on(`rp`.`id` = `us`.`tipo`)) ;
 
 --
--- Índices para tablas volcadas
+-- Ãndices para tablas volcadas
 --
 
 --
@@ -2655,7 +2655,7 @@ ALTER TABLE `herramientaot`
   ADD PRIMARY KEY (`id_ai_herramientaOT`),
   ADD KEY `id_herramienta` (`id_ai_herramienta`),
   ADD KEY `n_ot` (`n_ot`),
-  ADD KEY `idx_herramientaot_ot_estado` (`n_ot`,`estadoot`);
+  ADD KEY `idx_herramientaot_ot_estado` (`n_ot`,`estado_herramientaot`);
 
 --
 -- Indices de la tabla `log_user`
@@ -2907,11 +2907,11 @@ ALTER TABLE `user_system`
 -- `bdapp_metro`.
 --
 -- Ajustes aplicados:
--- 1) Se elimina cualquier versión previa para permitir reimportaciones.
+-- 1) Se elimina cualquier versiÃ³n previa para permitir reimportaciones.
 -- 2) Se normaliza el DEFINER a CURRENT_USER para no depender de
---    `u_admin`@`%` durante la importación.
--- 3) Se ubican después de tablas, vistas, índices y claves foráneas para que
---    el esquema operativo ya esté completo cuando queden creados.
+--    `u_admin`@`%` durante la importaciÃ³n.
+-- 3) Se ubican despuÃ©s de tablas, vistas, Ã­ndices y claves forÃ¡neas para que
+--    el esquema operativo ya estÃ© completo cuando queden creados.
 -- ============================================================================
 USE `bdapp_metro`;
 
@@ -3095,7 +3095,7 @@ CREATE DEFINER=CURRENT_USER PROCEDURE `sp_ot_asignar_herramienta` (IN `p_n_ot` V
       INTO v_ocupada
     FROM herramientaot
     WHERE id_ai_herramienta = p_id_ai_herramienta
-      AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA';
+      AND COALESCE(estado_herramientaot, 'ASIGNADA') <> 'LIBERADA';
 
     SET v_disponible = GREATEST(v_total - v_ocupada, 0);
 
@@ -3108,15 +3108,15 @@ CREATE DEFINER=CURRENT_USER PROCEDURE `sp_ot_asignar_herramienta` (IN `p_n_ot` V
     FROM herramientaot
     WHERE n_ot = p_n_ot
       AND id_ai_herramienta = p_id_ai_herramienta
-      AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA';
+      AND COALESCE(estado_herramientaot, 'ASIGNADA') <> 'LIBERADA';
 
     DELETE FROM herramientaot
     WHERE n_ot = p_n_ot
       AND id_ai_herramienta = p_id_ai_herramienta
-      AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA';
+      AND COALESCE(estado_herramientaot, 'ASIGNADA') <> 'LIBERADA';
 
     INSERT INTO herramientaot (
-        id_ai_herramienta, n_ot, cantidadot, estadoot
+        id_ai_herramienta, n_ot, cantidadot, estado_herramientaot
     ) VALUES (
         p_id_ai_herramienta, p_n_ot, (v_actual_ot + p_cantidad), 'ASIGNADA'
     );
@@ -3219,9 +3219,9 @@ CREATE DEFINER=CURRENT_USER PROCEDURE `sp_ot_cambiar_estado` (IN `p_n_ot` VARCHA
 
     IF v_libera_herramientas = 1 THEN
         UPDATE herramientaot
-           SET estadoot = 'LIBERADA'
+           SET estado_herramientaot = 'LIBERADA'
          WHERE n_ot = p_n_ot
-           AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA';
+           AND COALESCE(estado_herramientaot, 'ASIGNADA') <> 'LIBERADA';
     END IF;
 
     COMMIT;
@@ -3543,18 +3543,18 @@ CREATE TABLE `log_user` (
   `event_uuid` char(36) NOT NULL,
   `id_user` varchar(30) DEFAULT NULL COMMENT 'Identificador de user (FK o referencia).',
   `tabla` varchar(64) NOT NULL COMMENT 'Tabla origen del evento.',
-  `operacion` enum('INSERT','UPDATE','DELETE','SOFT_DELETE','RESTORE','UNKNOWN') NOT NULL COMMENT 'Tipo de operación registrada.',
+  `operacion` enum('INSERT','UPDATE','DELETE','SOFT_DELETE','RESTORE','UNKNOWN') NOT NULL COMMENT 'Tipo de operaciÃ³n registrada.',
   `pk_registro` varchar(255) DEFAULT NULL COMMENT 'Clave primaria (o identificador) del registro afectado.',
   `pk_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'Identificador/PK en formato JSON.' CHECK (json_valid(`pk_json`)),
   `accion` varchar(150) NOT NULL,
-  `resp_system` text NOT NULL COMMENT 'Detalle técnico de la operación registrada.',
+  `resp_system` text NOT NULL COMMENT 'Detalle tÃ©cnico de la operaciÃ³n registrada.',
   `data_old` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'Snapshot anterior (UPDATE/DELETE).' CHECK (json_valid(`data_old`)),
   `data_new` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'Snapshot posterior (INSERT/UPDATE).' CHECK (json_valid(`data_new`)),
   `data_diff` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'Solo campos modificados con [old,new].' CHECK (json_valid(`data_diff`)),
   `fecha_hora` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Fecha asociada a fecha hora.',
-  `connection_id` bigint(20) UNSIGNED DEFAULT NULL COMMENT 'CONNECTION_ID() de la sesión.',
-  `db_user` varchar(128) NOT NULL COMMENT 'Usuario de base de datos que ejecutó la operación.',
-  `db_host` varchar(128) DEFAULT NULL COMMENT 'Host extraído de USER().',
+  `connection_id` bigint(20) UNSIGNED DEFAULT NULL COMMENT 'CONNECTION_ID() de la sesiÃ³n.',
+  `db_user` varchar(128) NOT NULL COMMENT 'Usuario de base de datos que ejecutÃ³ la operaciÃ³n.',
+  `db_host` varchar(128) DEFAULT NULL COMMENT 'Host extraÃ­do de USER().',
   `changed_cols` varchar(1024) DEFAULT NULL COMMENT 'Lista CSV de columnas modificadas.',
   `std_reg` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Estado logico del registro'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
@@ -3616,7 +3616,7 @@ USE `bdapp_metro_review`;
 
 --
 -- Estructura Stand-in para la vista `vw_backup_runs`
--- (Véase abajo para la vista actual)
+-- (VÃ©ase abajo para la vista actual)
 --
 CREATE TABLE `vw_backup_runs` (
 `id` bigint(20) unsigned
@@ -3629,7 +3629,7 @@ CREATE TABLE `vw_backup_runs` (
 
 --
 -- Estructura Stand-in para la vista `vw_eventos`
--- (Véase abajo para la vista actual)
+-- (VÃ©ase abajo para la vista actual)
 --
 CREATE TABLE `vw_eventos` (
 `EVENT_SCHEMA` varchar(64)
@@ -3644,7 +3644,7 @@ CREATE TABLE `vw_eventos` (
 
 --
 -- Estructura Stand-in para la vista `vw_log_user_detalle`
--- (Véase abajo para la vista actual)
+-- (VÃ©ase abajo para la vista actual)
 --
 CREATE TABLE `vw_log_user_detalle` (
 `id_log` bigint(20) unsigned
@@ -3668,7 +3668,7 @@ CREATE TABLE `vw_log_user_detalle` (
 
 --
 -- Estructura Stand-in para la vista `vw_log_user_resumen`
--- (Véase abajo para la vista actual)
+-- (VÃ©ase abajo para la vista actual)
 --
 CREATE TABLE `vw_log_user_resumen` (
 `dia` date
@@ -3720,8 +3720,8 @@ CREATE ALGORITHM=UNDEFINED DEFINER=CURRENT_USER SQL SECURITY DEFINER VIEW `vw_lo
 -- ============================================================================
 -- BLOQUE FINAL. PRIVILEGIOS SOBRE LAS TRES BASES DE DATOS
 -- ----------------------------------------------------------------------------
--- Se asignan permisos por rol y además se deja a `usr_admin_upt` con permisos
--- directos sobre los tres esquemas para evitar depender de la activación
+-- Se asignan permisos por rol y ademÃ¡s se deja a `usr_admin_upt` con permisos
+-- directos sobre los tres esquemas para evitar depender de la activaciÃ³n
 -- manual del rol durante revisiones, actualizaciones o nuevas importaciones.
 -- ============================================================================
 DELIMITER $$
@@ -3794,7 +3794,7 @@ BEGIN NOT ATOMIC
     END;
 
     -- ------------------------------------------------------------
-    -- 2.1) Ejecución de procedimientos operativos
+    -- 2.1) EjecuciÃ³n de procedimientos operativos
     -- ------------------------------------------------------------
     BEGIN
         DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN END;
@@ -3872,7 +3872,7 @@ BEGIN NOT ATOMIC
         GRANT ALL PRIVILEGES ON `bdapp_metro_review`.* TO 'usr_admin_upt'@'%' WITH GRANT OPTION;
     END;
     -- ------------------------------------------------------------
-    -- 5) Roles por defecto (reaplicación final)
+    -- 5) Roles por defecto (reaplicaciÃ³n final)
     -- ------------------------------------------------------------
     BEGIN
         DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN END;

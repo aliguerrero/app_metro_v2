@@ -258,7 +258,11 @@ class reporteController extends mainModel
             // Herramientas usadas
             $sqlHerr = "
               SELECT
-                " . $this->columnasTablaSql('herramientaot', 'ho') . ",
+                ho.id_ai_herramientaOT,
+                ho.n_ot,
+                ho.id_ai_herramienta,
+                ho.cantidadot,
+                " . $this->herramientaOtEstadoSelect('ho') . ",
                 h.nombre_herramienta
               FROM herramientaot ho
               INNER JOIN herramienta h ON h.id_ai_herramienta = ho.id_ai_herramienta
@@ -333,7 +337,7 @@ class reporteController extends mainModel
                     $html .= '<td>' . htmlspecialchars((string)$h['id_ai_herramienta']) . '</td>';
                     $html .= '<td>' . htmlspecialchars((string)$h['nombre_herramienta']) . '</td>';
                     $html .= '<td style="text-align:center;">' . htmlspecialchars((string)$h['cantidadot']) . '</td>';
-                    $html .= '<td>' . htmlspecialchars((string)$h['estadoot']) . '</td>';
+                    $html .= '<td>' . htmlspecialchars((string)($h['estado_herramientaot'] ?? 'ASIGNADA')) . '</td>';
                     $html .= '</tr>';
                 }
 

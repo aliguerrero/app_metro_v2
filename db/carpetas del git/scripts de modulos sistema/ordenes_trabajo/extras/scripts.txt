@@ -60,7 +60,7 @@ SELECT
                 SELECT id_ai_herramienta, SUM(cantidadot) AS en_ot
                 FROM herramientaot
                 WHERE n_ot = :ot
-                  AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'
+                  AND COALESCE(estado_herramientaot, 'ASIGNADA') <> 'LIBERADA'
                 GROUP BY id_ai_herramienta
             ) otq ON vhd.id_ai_herramienta = otq.id_ai_herramienta
             WHERE (
@@ -78,7 +78,7 @@ SELECT
             FROM herramientaot hot
             INNER JOIN herramienta h ON hot.id_ai_herramienta = h.id_ai_herramienta
             WHERE hot.n_ot = :ot
-              AND COALESCE(hot.estadoot, 'ASIGNADA') <> 'LIBERADA'
+              AND COALESCE(hot.estado_herramientaot, 'ASIGNADA') <> 'LIBERADA'
               AND (
                     :q = ''
                     OR CAST(hot.id_ai_herramienta AS CHAR) LIKE :qLike1
@@ -97,7 +97,7 @@ SQL [11] - app/controllers/cargarHerramientasOt.php
 SELECT COALESCE(SUM(cantidadot),0) AS cur
          FROM herramientaot
          WHERE n_ot = :ot AND id_ai_herramienta = :hid
-           AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'
+           AND COALESCE(estado_herramientaot, 'ASIGNADA') <> 'LIBERADA'
 
 SQL [12] - app/controllers/cargarHerramientasOt.php
 SELECT (h.cantidad - COALESCE(occ.ocupada,0)) AS disp
@@ -105,7 +105,7 @@ SELECT (h.cantidad - COALESCE(occ.ocupada,0)) AS disp
          LEFT JOIN (
             SELECT id_ai_herramienta, SUM(cantidadot) AS ocupada
             FROM herramientaot
-            WHERE COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'
+            WHERE COALESCE(estado_herramientaot, 'ASIGNADA') <> 'LIBERADA'
             GROUP BY id_ai_herramienta
          ) occ ON h.id_ai_herramienta = occ.id_ai_herramienta
          WHERE h.id_ai_herramienta = :id AND h.std_reg='1'
@@ -114,10 +114,10 @@ SELECT (h.cantidad - COALESCE(occ.ocupada,0)) AS disp
 SQL [13] - app/controllers/cargarHerramientasOt.php
 DELETE FROM herramientaot
        WHERE n_ot = :ot AND id_ai_herramienta = :hid
-         AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'
+         AND COALESCE(estado_herramientaot, 'ASIGNADA') <> 'LIBERADA'
 
 SQL [14] - app/controllers/cargarHerramientasOt.php
-INSERT INTO herramientaot (id_ai_herramienta, n_ot, cantidadot, estadoot)
+INSERT INTO herramientaot (id_ai_herramienta, n_ot, cantidadot, estado_herramientaot)
              VALUES (:hid, :ot, :cant, 'ASIGNADA')
 
 SQL [15] - app/controllers/cargarHerramientasOt.php
@@ -144,7 +144,7 @@ SELECT
                 FROM herramientaot hot
                 LEFT JOIN herramienta h ON hot.id_ai_herramienta = h.id_ai_herramienta
                 WHERE hot.n_ot = :not
-                  AND COALESCE(hot.estadoot, 'ASIGNADA') <> 'LIBERADA'
+                  AND COALESCE(hot.estado_herramientaot, 'ASIGNADA') <> 'LIBERADA'
                 GROUP BY hot.n_ot, hot.id_ai_herramienta, h.nombre_herramienta
                 ORDER BY hot.id_ai_herramienta ASC
 
@@ -174,7 +174,7 @@ SELECT
                 FROM herramientaot hot
                 LEFT JOIN herramienta h ON hot.id_ai_herramienta = h.id_ai_herramienta
                 WHERE hot.n_ot = :not
-                  AND COALESCE(hot.estadoot, 'ASIGNADA') <> 'LIBERADA'
+                  AND COALESCE(hot.estado_herramientaot, 'ASIGNADA') <> 'LIBERADA'
                   AND (
                         CAST(hot.id_ai_herramienta AS CHAR) LIKE :q
                         OR h.nombre_herramienta LIKE :q
@@ -195,13 +195,13 @@ SQL [21] - app/controllers/cargarDatosBuscadorHOT.php
 SELECT COALESCE(SUM(cantidadot), 0) AS cantidadot
     FROM herramientaot
     WHERE n_ot = :not AND id_ai_herramienta = :idher
-      AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'
+      AND COALESCE(estado_herramientaot, 'ASIGNADA') <> 'LIBERADA'
 
 SQL [22] - app/controllers/cargarDatosBuscadorHOT.php
 CALL sp_ot_asignar_herramienta(:not, :idher, :cant, :id_user_operacion)
 
 SQL [23] - app/controllers/cargarDatosBuscadorHOT.php
-DELETE FROM herramientaot WHERE n_ot = :not AND id_ai_herramienta = :idher AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'
+DELETE FROM herramientaot WHERE n_ot = :not AND id_ai_herramienta = :idher AND COALESCE(estado_herramientaot, 'ASIGNADA') <> 'LIBERADA'
 
 SQL [24] - app/controllers/cargarDatosBuscadorHOT.php
-INSERT INTO herramientaot (n_ot, id_ai_herramienta, cantidadot, estadoot) VALUES (:not, :idher, :cant, 'ASIGNADA')
+INSERT INTO herramientaot (n_ot, id_ai_herramienta, cantidadot, estado_herramientaot) VALUES (:not, :idher, :cant, 'ASIGNADA')

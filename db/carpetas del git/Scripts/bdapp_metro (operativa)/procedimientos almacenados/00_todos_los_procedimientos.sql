@@ -180,7 +180,7 @@ CREATE DEFINER=CURRENT_USER PROCEDURE `sp_ot_asignar_herramienta` (IN `p_n_ot` V
       INTO v_ocupada
     FROM herramientaot
     WHERE id_ai_herramienta = p_id_ai_herramienta
-      AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA';
+      AND COALESCE(estado_herramientaot, 'ASIGNADA') <> 'LIBERADA';
 
     SET v_disponible = GREATEST(v_total - v_ocupada, 0);
 
@@ -193,15 +193,15 @@ CREATE DEFINER=CURRENT_USER PROCEDURE `sp_ot_asignar_herramienta` (IN `p_n_ot` V
     FROM herramientaot
     WHERE n_ot = p_n_ot
       AND id_ai_herramienta = p_id_ai_herramienta
-      AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA';
+      AND COALESCE(estado_herramientaot, 'ASIGNADA') <> 'LIBERADA';
 
     DELETE FROM herramientaot
     WHERE n_ot = p_n_ot
       AND id_ai_herramienta = p_id_ai_herramienta
-      AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA';
+      AND COALESCE(estado_herramientaot, 'ASIGNADA') <> 'LIBERADA';
 
     INSERT INTO herramientaot (
-        id_ai_herramienta, n_ot, cantidadot, estadoot
+        id_ai_herramienta, n_ot, cantidadot, estado_herramientaot
     ) VALUES (
         p_id_ai_herramienta, p_n_ot, (v_actual_ot + p_cantidad), 'ASIGNADA'
     );
@@ -304,9 +304,9 @@ CREATE DEFINER=CURRENT_USER PROCEDURE `sp_ot_cambiar_estado` (IN `p_n_ot` VARCHA
 
     IF v_libera_herramientas = 1 THEN
         UPDATE herramientaot
-           SET estadoot = 'LIBERADA'
+           SET estado_herramientaot = 'LIBERADA'
          WHERE n_ot = p_n_ot
-           AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA';
+           AND COALESCE(estado_herramientaot, 'ASIGNADA') <> 'LIBERADA';
     END IF;
 
     COMMIT;

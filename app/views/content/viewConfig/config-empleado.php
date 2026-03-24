@@ -78,13 +78,16 @@ $insEmpleado = new empleadoController();
                         <div class="col-12 col-md-6">
                             <label class="form-label"><b>Telefono</b></label>
                             <input class="form-control" name="telefono" id="telefono_create" type="text"
-                                placeholder="Ej: 0412-0000000">
+                                placeholder="Ej: 0412-0000000" inputmode="tel" minlength="10" maxlength="20"
+                                pattern="[0-9()+ -]{10,20}">
+                            <small class="text-muted">Usa entre 10 y 15 digitos. Puedes incluir `+`, parentesis, espacios o guiones.</small>
                         </div>
 
                         <div class="col-12 col-md-6">
                             <label class="form-label"><b>Correo</b></label>
                             <input class="form-control" name="correo" id="correo_create" type="email"
-                                placeholder="correo@dominio.com">
+                                placeholder="correo@dominio.com" autocomplete="email" required>
+                            <small class="text-muted">El correo es obligatorio.</small>
                         </div>
 
                         <div class="col-12">
@@ -148,13 +151,16 @@ $insEmpleado = new empleadoController();
                         <div class="col-12 col-md-6">
                             <label class="form-label"><b>Telefono</b></label>
                             <input class="form-control" id="edit_telefono" name="telefono" type="text"
-                                placeholder="Ej: 0412-0000000">
+                                placeholder="Ej: 0412-0000000" inputmode="tel" minlength="10" maxlength="20"
+                                pattern="[0-9()+ -]{10,20}">
+                            <small class="text-muted">Usa entre 10 y 15 digitos. Puedes incluir `+`, parentesis, espacios o guiones.</small>
                         </div>
 
                         <div class="col-12 col-md-6">
                             <label class="form-label"><b>Correo</b></label>
                             <input class="form-control" id="edit_correo" name="correo" type="email"
-                                placeholder="correo@dominio.com">
+                                placeholder="correo@dominio.com" autocomplete="email" required>
+                            <small class="text-muted">El correo es obligatorio.</small>
                         </div>
 
                         <div class="col-12">

@@ -15,7 +15,7 @@ if ($action === '') {
 
 $idPattern = '/^[a-zA-Z0-9-]{3,30}$/';
 $nombrePattern = '/^[\p{L}0-9 .-]{3,100}$/u';
-$telefonoPattern = '/^[0-9()+ -]{7,20}$/';
+$telefonoPattern = '/^[0-9()+ -]{10,20}$/';
 
 $normalizarNacionalidad = static function (string $nacionalidad): string {
     $nacionalidad = strtoupper(trim($nacionalidad));
@@ -23,7 +23,23 @@ $normalizarNacionalidad = static function (string $nacionalidad): string {
 };
 
 $normalizarTelefono = static function (string $telefono): string {
-    return trim($telefono);
+    $telefono = preg_replace('/\s+/u', ' ', trim($telefono));
+    return is_string($telefono) ? $telefono : '';
+};
+
+$telefonoEsValido = static function (string $telefono) use ($telefonoPattern): bool {
+    if ($telefono === '') {
+        return true;
+    }
+
+    if (!preg_match($telefonoPattern, $telefono)) {
+        return false;
+    }
+
+    $digitos = preg_replace('/\D+/', '', $telefono);
+    $totalDigitos = is_string($digitos) ? strlen($digitos) : 0;
+
+    return $totalDigitos >= 10 && $totalDigitos <= 15;
 };
 
 $normalizarDireccion = static function (string $direccion): ?string {
@@ -77,7 +93,7 @@ try {
                 appsec_fail('El nombre del empleado no cumple con el formato solicitado.', 400, ['error' => 'nombre_invalido']);
             }
 
-            if ($telefono !== '' && !preg_match($telefonoPattern, $telefono)) {
+            if (!$telefonoEsValido($telefono)) {
                 appsec_fail('El telefono no cumple con el formato solicitado.', 400, ['error' => 'telefono_invalido']);
             }
 
@@ -89,7 +105,11 @@ try {
             }
 
             $correoNormalizado = $normalizarCorreo($correo);
-            if ($correoNormalizado !== null && !filter_var($correoNormalizado, FILTER_VALIDATE_EMAIL)) {
+            if ($correoNormalizado === null) {
+                appsec_fail('El correo es obligatorio.', 400, ['error' => 'correo_requerido']);
+            }
+
+            if (!filter_var($correoNormalizado, FILTER_VALIDATE_EMAIL)) {
                 appsec_fail('El correo no es valido.', 400, ['error' => 'correo_invalido']);
             }
 
@@ -194,7 +214,7 @@ try {
                 appsec_fail('El nombre del empleado no cumple con el formato solicitado.', 400, ['error' => 'nombre_invalido']);
             }
 
-            if ($telefono !== '' && !preg_match($telefonoPattern, $telefono)) {
+            if (!$telefonoEsValido($telefono)) {
                 appsec_fail('El telefono no cumple con el formato solicitado.', 400, ['error' => 'telefono_invalido']);
             }
 
@@ -206,7 +226,11 @@ try {
             }
 
             $correoNormalizado = $normalizarCorreo($correo);
-            if ($correoNormalizado !== null && !filter_var($correoNormalizado, FILTER_VALIDATE_EMAIL)) {
+            if ($correoNormalizado === null) {
+                appsec_fail('El correo es obligatorio.', 400, ['error' => 'correo_requerido']);
+            }
+
+            if (!filter_var($correoNormalizado, FILTER_VALIDATE_EMAIL)) {
                 appsec_fail('El correo no es valido.', 400, ['error' => 'correo_invalido']);
             }
 

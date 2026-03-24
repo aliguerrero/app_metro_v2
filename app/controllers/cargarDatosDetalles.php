@@ -24,6 +24,8 @@ function requirePerm(string $permKey): void
 try {
     $mainModel = new mainModel();
     $detalleCols = $mainModel->columnasTablaSql('detalle_orden', 'd');
+    $estadoHerrCol = $mainModel->herramientaOtEstadoCol();
+    $estadoHerrExpr = $mainModel->herramientaOtEstadoExpr();
 
     $tipoBusqueda = $mainModel->limpiarCadena($_GET['tipoBusqueda'] ?? '');
 
@@ -107,6 +109,7 @@ try {
         "SELECT COALESCE(SUM(cantidadot),0) AS ocupada
          FROM herramientaot
          WHERE id_ai_herramienta = :id
+           AND {$estadoHerrExpr} <> 'LIBERADA'
          FOR UPDATE",
         [':id' => $idHerr]
     );
@@ -118,6 +121,7 @@ try {
         "SELECT id_ai_herramientaOT, cantidadot
          FROM herramientaot
          WHERE n_ot = :not AND id_ai_herramienta = :id
+           AND {$estadoHerrExpr} <> 'LIBERADA'
          LIMIT 1
          FOR UPDATE",
         [':not' => $n_ot, ':id' => $idHerr]
@@ -141,7 +145,7 @@ try {
             );
         } else {
             $mainModel->ejecutarConsultaConParametros(
-                "INSERT INTO herramientaot (id_ai_herramienta, n_ot, cantidadot, estadoot)
+                "INSERT INTO herramientaot (id_ai_herramienta, n_ot, cantidadot, `{$estadoHerrCol}`)
                  VALUES (:id, :not, 1, 'ASIGNADA')",
                 [':id' => $idHerr, ':not' => $n_ot]
             );
@@ -164,14 +168,16 @@ try {
     if ($cantActual <= 1) {
         $mainModel->ejecutarConsultaConParametros(
             "DELETE FROM herramientaot
-             WHERE n_ot = :not AND id_ai_herramienta = :id",
+             WHERE n_ot = :not AND id_ai_herramienta = :id
+               AND {$estadoHerrExpr} <> 'LIBERADA'",
             [':not' => $n_ot, ':id' => $idHerr]
         );
     } else {
         $mainModel->ejecutarConsultaConParametros(
             "UPDATE herramientaot
              SET cantidadot = cantidadot - 1
-             WHERE n_ot = :not AND id_ai_herramienta = :id",
+             WHERE n_ot = :not AND id_ai_herramienta = :id
+               AND {$estadoHerrExpr} <> 'LIBERADA'",
             [':not' => $n_ot, ':id' => $idHerr]
         );
     }

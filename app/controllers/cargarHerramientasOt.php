@@ -102,6 +102,9 @@ function otEstaFinalizada(mainModel $m, string $ot): bool
 }
 
 $mainModel = new mainModel();
+$estadoHerrCol = $mainModel->herramientaOtEstadoCol();
+$estadoHerrExpr = $mainModel->herramientaOtEstadoExpr();
+$estadoHerrHotExpr = $mainModel->herramientaOtEstadoExpr('hot');
 
 try {
   // Para ver inventario/asignadas:
@@ -139,7 +142,7 @@ try {
                 SELECT id_ai_herramienta, SUM(cantidadot) AS en_ot
                 FROM herramientaot
                 WHERE n_ot = :ot
-                  AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'
+                  AND {$estadoHerrExpr} <> 'LIBERADA'
                 GROUP BY id_ai_herramienta
             ) otq ON vhd.id_ai_herramienta = otq.id_ai_herramienta
             WHERE (
@@ -175,7 +178,7 @@ try {
             FROM herramientaot hot
             INNER JOIN herramienta h ON hot.id_ai_herramienta = h.id_ai_herramienta
             WHERE hot.n_ot = :ot
-              AND COALESCE(hot.estadoot, 'ASIGNADA') <> 'LIBERADA'
+              AND {$estadoHerrHotExpr} <> 'LIBERADA'
               AND (
                     :q = ''
                     OR CAST(hot.id_ai_herramienta AS CHAR) LIKE :qLike1
@@ -201,16 +204,70 @@ try {
   // =========================
   if ($tipo === 'ocupaciones' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $herrId = rq('herramienta_id', '');
+    $detallePk = detallePkOt($mainModel);
 
     if (!isDigits($herrId)) {
       jsonResponse(["ok" => false, "error" => "herramienta_invalida"], 400);
     }
 
     $rows = $mainModel->ejecutarProcedimientoTodos(
-      "CALL sp_herramienta_ocupaciones(:hid, :q)",
+      "SELECT
+          hot.id_ai_herramientaOT,
+          hot.id_ai_herramienta,
+          h.nombre_herramienta,
+          hot.n_ot,
+          ot.nombre_trab,
+          hot.cantidadot AS cantidad,
+          COALESCE(eo.nombre_estado, 'SIN ESTADO') AS estado_ot,
+          COALESCE(det.id_user_act, ot.id_user, '') AS tecnico_id,
+          COALESCE(emp_det.nombre_empleado, emp_ot.nombre_empleado, 'Sin tecnico asignado') AS tecnico_nombre,
+          COALESCE(emp_det.telefono, emp_ot.telefono, '') AS telefono,
+          COALESCE(emp_det.correo, emp_ot.correo, '') AS correo,
+          COALESCE(emp_det.direccion, emp_ot.direccion, '') AS direccion,
+          " . $mainModel->herramientaOtEstadoSelect('hot') . ",
+          ot.fecha AS fecha_ot
+       FROM herramientaot hot
+       INNER JOIN herramienta h
+         ON h.id_ai_herramienta = hot.id_ai_herramienta
+        AND h.std_reg = 1
+       INNER JOIN orden_trabajo ot
+         ON ot.n_ot = hot.n_ot
+        AND ot.std_reg = 1
+       LEFT JOIN estado_ot eo
+         ON eo.id_ai_estado = ot.id_ai_estado
+       LEFT JOIN (
+          SELECT d1.n_ot, d1.id_user_act
+          FROM detalle_orden d1
+          INNER JOIN (
+              SELECT n_ot, MAX({$detallePk}) AS max_id
+              FROM detalle_orden
+              GROUP BY n_ot
+          ) d2
+            ON d2.n_ot = d1.n_ot
+           AND d2.max_id = d1.{$detallePk}
+       ) det
+         ON det.n_ot = hot.n_ot
+       LEFT JOIN empleado emp_det
+         ON emp_det.id_empleado = det.id_user_act
+        AND emp_det.std_reg = 1
+       LEFT JOIN empleado emp_ot
+         ON emp_ot.id_empleado = ot.id_user
+        AND emp_ot.std_reg = 1
+       WHERE hot.id_ai_herramienta = :hid
+         AND {$estadoHerrHotExpr} <> 'LIBERADA'
+         AND (
+              :q = ''
+              OR hot.n_ot LIKE :qLike1
+              OR ot.nombre_trab LIKE :qLike2
+              OR COALESCE(emp_det.nombre_empleado, emp_ot.nombre_empleado, 'Sin tecnico asignado') LIKE :qLike3
+         )
+       ORDER BY hot.n_ot ASC, hot.id_ai_herramientaOT ASC",
       [
         ':hid' => (int)$herrId,
         ':q' => $q,
+        ':qLike1' => $qLike,
+        ':qLike2' => $qLike,
+        ':qLike3' => $qLike,
       ]
     );
 
@@ -273,7 +330,7 @@ try {
     "SELECT COALESCE(SUM(cantidadot),0) AS cur
          FROM herramientaot
          WHERE n_ot = :ot AND id_ai_herramienta = :hid
-           AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'",
+           AND {$estadoHerrExpr} <> 'LIBERADA'",
     [':ot' => $ot, ':hid' => (int)$herrId]
   );
   $cur = $stCur ? (int)$stCur->fetchColumn() : 0;
@@ -285,7 +342,7 @@ try {
          LEFT JOIN (
             SELECT id_ai_herramienta, SUM(cantidadot) AS ocupada
             FROM herramientaot
-            WHERE COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'
+            WHERE {$estadoHerrExpr} <> 'LIBERADA'
             GROUP BY id_ai_herramienta
          ) occ ON h.id_ai_herramienta = occ.id_ai_herramienta
          WHERE h.id_ai_herramienta = :id AND h.std_reg='1'
@@ -295,17 +352,17 @@ try {
   $disp = ($stDisp && $stDisp->rowCount() > 0) ? (int)$stDisp->fetchColumn() : 0;
 
   // Helper: deja 1 sola fila por OT+Herr (evita duplicados)
-  $normalizarSet = function (int $newQty) use ($mainModel, $ot, $herrId) {
+  $normalizarSet = function (int $newQty) use ($mainModel, $ot, $herrId, $estadoHerrExpr, $estadoHerrCol) {
     // borra duplicados
     $mainModel->ejecutarConsultaConParametros(
       "DELETE FROM herramientaot
        WHERE n_ot = :ot AND id_ai_herramienta = :hid
-         AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'",
+         AND {$estadoHerrExpr} <> 'LIBERADA'",
       [':ot' => $ot, ':hid' => (int)$herrId]
     );
     // inserta una sola
     $mainModel->ejecutarConsultaConParametros(
-      "INSERT INTO herramientaot (id_ai_herramienta, n_ot, cantidadot, estadoot)
+      "INSERT INTO herramientaot (id_ai_herramienta, n_ot, cantidadot, `{$estadoHerrCol}`)
              VALUES (:hid, :ot, :cant, 'ASIGNADA')",
       [':hid' => (int)$herrId, ':ot' => $ot, ':cant' => $newQty]
     );
@@ -341,7 +398,7 @@ try {
       $mainModel->ejecutarConsultaConParametros(
         "DELETE FROM herramientaot
          WHERE n_ot = :ot AND id_ai_herramienta = :hid
-           AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'",
+           AND {$estadoHerrExpr} <> 'LIBERADA'",
         [':ot' => $ot, ':hid' => (int)$herrId]
       );
       jsonResponse(["ok" => true, "tipo" => "simple", "icono" => "success", "titulo" => "Quitada", "texto" => "Herramienta quitada."]);
@@ -361,7 +418,7 @@ try {
     $mainModel->ejecutarConsultaConParametros(
       "DELETE FROM herramientaot
        WHERE n_ot = :ot AND id_ai_herramienta = :hid
-         AND COALESCE(estadoot, 'ASIGNADA') <> 'LIBERADA'",
+         AND {$estadoHerrExpr} <> 'LIBERADA'",
       [':ot' => $ot, ':hid' => (int)$herrId]
     );
     jsonResponse(["ok" => true, "tipo" => "simple", "icono" => "success", "titulo" => "Quitada", "texto" => "Herramienta quitada."]);

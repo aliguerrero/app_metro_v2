@@ -31,7 +31,7 @@ class mainModel
         'empresa_config' => ['id', 'nombre', 'rif', 'direccion', 'telefono', 'email', 'logo', 'created_at', 'updated_at'],
         'estado_ot' => ['id_ai_estado', 'nombre_estado', 'color', 'libera_herramientas', 'bloquea_ot', 'std_reg'],
         'herramienta' => ['id_ai_herramienta', 'nombre_herramienta', 'id_ai_categoria_herramienta', 'cantidad', 'estado', 'std_reg'],
-        'herramientaot' => ['id_ai_herramientaOT', 'id_ai_herramienta', 'n_ot', 'cantidadot', 'estadoot'],
+        'herramientaot' => ['id_ai_herramientaOT', 'id_ai_herramienta', 'n_ot', 'cantidadot', 'estado_herramientaot'],
         'log_user' => ['id_log', 'event_uuid', 'id_user', 'tabla', 'operacion', 'pk_registro', 'pk_json', 'accion', 'resp_system', 'data_old', 'data_new', 'data_diff', 'fecha_hora', 'connection_id', 'db_user', 'db_host', 'changed_cols', 'std_reg'],
         'miembro' => ['id_ai_miembro', 'id_miembro', 'id_empleado', 'nombre_miembro', 'tipo_miembro', 'std_reg'],
         'orden_trabajo' => ['id_ai_ot', 'n_ot', 'id_ai_area', 'id_user', 'id_ai_sitio', 'id_ai_estado', 'nombre_trab', 'fecha', 'semana', 'mes', 'ot_finalizada', 'fecha_finalizacion', 'id_user_finaliza', 'std_reg'],
@@ -327,6 +327,30 @@ class mainModel
         }
 
         return (int)$stmt->fetchColumn() === 1;
+    }
+
+    public function herramientaOtEstadoCol(): string
+    {
+        if ($this->tableHasColumn('herramientaot', 'estado_herramientaot')) {
+            return 'estado_herramientaot';
+        }
+
+        return 'estadoot';
+    }
+
+    public function herramientaOtEstadoExpr(string $alias = ''): string
+    {
+        $prefix = '';
+        if ($alias !== '') {
+            $prefix = $this->q($alias) . '.';
+        }
+
+        return "COALESCE({$prefix}" . $this->q($this->herramientaOtEstadoCol()) . ", 'ASIGNADA')";
+    }
+
+    public function herramientaOtEstadoSelect(string $alias = '', string $resultAlias = 'estado_herramientaot'): string
+    {
+        return $this->herramientaOtEstadoExpr($alias) . ' AS ' . $this->q($resultAlias);
     }
 
     public function primerEstadoFinalOtId(): int
