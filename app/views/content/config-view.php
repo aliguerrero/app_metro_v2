@@ -50,12 +50,12 @@
                 </div>
             </div>
 
-            <div class="card-body">
-                <div class="row g-3">
+            <div class="card-body config-workspace">
+                <div class="row g-3 config-layout">
 
                     <!-- DESKTOP: menú lateral -->
-                    <div class="col-md-4 col-lg-3 d-none d-md-block">
-                        <div class="list-group config-menu" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                    <div class="col-md-4 col-lg-3 d-none d-md-block config-menu-col">
+                        <div class="list-group config-menu config-browser-tabs" id="v-pills-tab" role="tablist" aria-orientation="horizontal">
 
                             <button class="list-group-item list-group-item-action active" id="v-pills-cuenta-tab"
                                 data-bs-toggle="pill" data-bs-target="#v-pills-cuenta" type="button" role="tab"
@@ -208,7 +208,7 @@
                     </div>
 
                     <!-- CONTENIDO -->
-                    <div class="col-12 col-md-8 col-lg-9 p-2">
+                    <div class="col-12 col-md-8 col-lg-9 p-2 config-content-col">
 
                         <?php if (!$isAdmin) { ?>
                         <div class="alert alert-info d-md-none">
@@ -226,7 +226,7 @@
 
                         <?php } ?>
 
-                        <div class="tab-content" id="v-pills-tabContent">
+                        <div class="tab-content config-module-stage" id="v-pills-tabContent">
 
                             <div class="tab-pane fade show active" id="v-pills-cuenta" role="tabpanel"
                                 aria-labelledby="v-pills-cuenta-tab">
@@ -303,11 +303,29 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const select = document.getElementById('configTabSelect');
+    const tabsBar = document.getElementById('v-pills-tab');
     if (!select) return;
 
     if (!window.bootstrap || !bootstrap.Tab) {
         console.error('[Config] Bootstrap Tab no disponible. Revisa carga de bootstrap.bundle.min.js');
         return;
+    }
+
+    if (tabsBar) {
+        tabsBar.addEventListener('wheel', function(e) {
+            const hasHorizontalOverflow = tabsBar.scrollWidth > tabsBar.clientWidth;
+            const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+
+            if (!hasHorizontalOverflow || delta === 0) {
+                return;
+            }
+
+            e.preventDefault();
+            tabsBar.scrollBy({
+                left: delta,
+                behavior: 'auto'
+            });
+        }, { passive: false });
     }
 
     select.addEventListener('change', function() {
@@ -320,6 +338,11 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('shown.bs.tab', function(e) {
             const target = e.target.getAttribute('data-bs-target');
             if (target) select.value = target;
+            e.target.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+                inline: 'center'
+            });
         });
     });
 });

@@ -62,8 +62,20 @@ class mainModel
                 // PDO::ATTR_PERSISTENT => false,
             ];
 
-            // Cuenta operativa dedicada de la app
-            $this->pdo = new PDO($dsn, $this->user, $this->pass, $options);
+            // Cuenta operativa dedicada de la app.
+            // Si `u_app` aun no fue provisionado en esta instancia local,
+            // degradamos temporalmente a `u_escritor` para no romper la app.
+            try {
+                $this->pdo = new PDO($dsn, $this->user, $this->pass, $options);
+            } catch (PDOException $primary) {
+                $canFallback = ($this->user === 'u_app' && stripos($primary->getMessage(), 'Access denied') !== false);
+                if (!$canFallback) {
+                    throw $primary;
+                }
+
+                $this->pdo = new PDO($dsn, 'u_escritor', $this->pass, $options);
+                $this->user = 'u_escritor';
+            }
 
             $this->pdo->exec("SET NAMES utf8mb4");
             $this->pdo->exec("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED");

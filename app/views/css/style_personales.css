@@ -55,6 +55,200 @@
       color: rgba(255, 255, 255, .96) !important;
   }
 
+  .tools-scope .config-workspace {
+      padding-top: 1rem;
+  }
+
+  .tools-scope .config-content-col {
+      min-width: 0;
+  }
+
+  .tools-scope .config-module-stage {
+      border: 1px solid rgba(17, 24, 39, .08);
+      border-radius: 1.15rem;
+      background: linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(246, 248, 252, .96));
+      box-shadow: 0 16px 36px rgba(2, 6, 23, .06);
+      padding: 1rem;
+  }
+
+  .tools-scope .config-module-stage>.tab-pane {
+      min-width: 0;
+  }
+
+  @media (min-width: 768px) {
+      .tools-scope .config-layout {
+          flex-direction: column;
+      }
+
+      .tools-scope .config-layout>.config-menu-col,
+      .tools-scope .config-layout>.config-content-col {
+          flex: 0 0 100%;
+          max-width: 100%;
+          width: 100%;
+      }
+
+      .tools-scope .config-layout>.config-menu-col {
+          margin-bottom: .15rem;
+          position: relative;
+          z-index: 3;
+      }
+
+      .tools-scope .config-browser-tabs {
+          display: flex !important;
+          flex-direction: row !important;
+          align-items: center;
+          flex-wrap: nowrap;
+          gap: .45rem;
+          overflow-x: auto;
+          overflow-y: hidden;
+          padding: .35rem .1rem .55rem;
+          margin-bottom: 0;
+          scrollbar-width: thin;
+          border: none;
+          background: transparent;
+          box-shadow: none;
+          border-radius: 0;
+      }
+
+      .tools-scope .config-browser-tabs .list-group-item {
+          position: relative;
+          flex: 0 0 auto;
+          width: 3.15rem;
+          min-width: 3.15rem;
+          max-width: 3.15rem;
+          min-height: 3.15rem;
+          margin: 0;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          border-radius: 1rem;
+          border: 1px solid rgba(17, 24, 39, .09);
+          background: #fff;
+          box-shadow: 0 6px 14px rgba(15, 23, 42, .06);
+          transition:
+              width .22s ease,
+              min-width .22s ease,
+              max-width .22s ease,
+              transform .18s ease,
+              background-color .18s ease,
+              border-color .18s ease,
+              box-shadow .18s ease;
+      }
+
+      .tools-scope .config-browser-tabs .list-group-item .d-flex {
+          position: relative;
+          width: 100%;
+          padding: 0 .9rem;
+          justify-content: center;
+          align-items: center !important;
+          gap: 0 !important;
+      }
+
+      .tools-scope .config-browser-tabs .list-group-item .d-flex>div:last-child {
+          flex: 0 1 auto;
+          max-width: 0;
+          overflow: hidden;
+          opacity: 0;
+          margin-left: 0;
+          text-align: left;
+          white-space: nowrap;
+          transition: max-width .22s ease, opacity .18s ease, margin-left .22s ease;
+      }
+
+      .tools-scope .config-browser-tabs .list-group-item .fw-semibold {
+          display: block;
+          white-space: nowrap;
+          font-size: .92rem;
+          line-height: 1.1;
+          color: #183248;
+      }
+
+      .tools-scope .config-browser-tabs .list-group-item small {
+          display: block;
+          margin-top: .18rem;
+          color: #5c6b78;
+          font-size: .77rem;
+          line-height: 1.35;
+      }
+
+      .tools-scope .config-browser-tabs .list-group-item i {
+          color: #607080;
+          font-size: 1.05rem;
+      }
+
+      .tools-scope .config-browser-tabs .list-group-item:hover,
+      .tools-scope .config-browser-tabs .list-group-item:focus-visible {
+          transform: translateY(-1px);
+          width: 13.5rem;
+          min-width: 13.5rem;
+          max-width: 13.5rem;
+          justify-content: flex-start;
+          background: #fff;
+          border-color: rgba(17, 24, 39, .11);
+          box-shadow: 0 12px 24px rgba(15, 23, 42, .10);
+      }
+
+      .tools-scope .config-browser-tabs .list-group-item:hover .d-flex>div:last-child,
+      .tools-scope .config-browser-tabs .list-group-item:focus-visible .d-flex>div:last-child,
+      .tools-scope .config-browser-tabs .list-group-item:focus-within .d-flex>div:last-child {
+          opacity: 1;
+          max-width: 9.35rem;
+          margin-left: .7rem;
+      }
+
+      .tools-scope .config-browser-tabs .list-group-item:hover .d-flex,
+      .tools-scope .config-browser-tabs .list-group-item:focus-visible .d-flex,
+      .tools-scope .config-browser-tabs .list-group-item:focus-within .d-flex {
+          justify-content: flex-start;
+      }
+
+      .tools-scope .config-browser-tabs .list-group-item.active {
+          transform: translateY(0);
+          width: 13.5rem;
+          min-width: 13.5rem;
+          max-width: 13.5rem;
+          justify-content: flex-start;
+          background: linear-gradient(180deg, #f78c00 0%, #ea7b00 100%);
+          color: #fff;
+          border-color: rgba(201, 118, 9, .24);
+          box-shadow: 0 14px 28px rgba(245, 124, 0, .22);
+      }
+
+      .tools-scope .config-browser-tabs .list-group-item.active .d-flex {
+          justify-content: flex-start;
+      }
+
+      .tools-scope .config-browser-tabs .list-group-item.active .d-flex>div:last-child {
+          opacity: 1;
+          max-width: 9.35rem;
+          margin-left: .7rem;
+      }
+
+      .tools-scope .config-browser-tabs .list-group-item.active .fw-semibold,
+      .tools-scope .config-browser-tabs .list-group-item.active i,
+      .tools-scope .config-browser-tabs .list-group-item.active small {
+          color: rgba(255, 255, 255, .96) !important;
+      }
+
+      .tools-scope .config-browser-tabs .list-group-item.active::after {
+          content: none;
+      }
+
+      .tools-scope .config-module-stage {
+          margin-top: -1px;
+          padding: 1.2rem;
+          min-height: 62vh;
+      }
+  }
+
+  @media (max-width: 767.98px) {
+      .tools-scope .config-module-stage {
+          padding: .85rem;
+      }
+  }
+
   .tools-scope .section-role-badge {
       display: inline-flex;
       align-items: center;
@@ -321,7 +515,8 @@
   /* --- Tabla (Desktop) --- */
   .tools-scope .table-wrapper3 {
       border-radius: .9rem;
-      overflow: hidden;
+      overflow-x: auto;
+      overflow-y: auto;
       border: 1px solid var(--line);
   }
 

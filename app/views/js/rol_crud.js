@@ -11,11 +11,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const rolesSelectWrap = document.getElementById('rolesSelectWrap');
     const rolNameInput = document.getElementById('rol_name');
 
-    const btnCrearRol = document.getElementById('btnCrearRol');
     const btnEliminarRol = document.getElementById('btnEliminarRol');
 
     const permisosWrap = document.getElementById('contenido');
     const btnGuardarPermisos = document.getElementById('btnGuardarPermisos');
+    const btnLimpiarPermisos = document.getElementById('btnLimpiarPermisos');
+    const btnRolesPrimaryText = document.getElementById('btnRolesPrimaryText');
+    const btnRolesPrimaryIcon = document.getElementById('btnRolesPrimaryIcon');
 
     const msgRolesTop = document.getElementById('rolesMsgTop');
     const msgPermTop = document.getElementById('permMsgTop');
@@ -196,6 +198,29 @@ document.addEventListener('DOMContentLoaded', () => {
         return payload;
     }
 
+    function isModoCrear() {
+        return (selectAccion?.value || '1') === '2';
+    }
+
+    function syncPrimaryAction() {
+        if (!btnGuardarPermisos) return;
+
+        if (isModoCrear()) {
+            if (btnRolesPrimaryText) btnRolesPrimaryText.textContent = 'Crear rol';
+            if (btnRolesPrimaryIcon) {
+                btnRolesPrimaryIcon.className = 'bi bi-save me-1';
+            }
+            btnGuardarPermisos.title = 'Crear rol';
+            return;
+        }
+
+        if (btnRolesPrimaryText) btnRolesPrimaryText.textContent = 'Guardar cambios';
+        if (btnRolesPrimaryIcon) {
+            btnRolesPrimaryIcon.className = 'bi bi-check2-circle me-1';
+        }
+        btnGuardarPermisos.title = 'Guardar cambios';
+    }
+
     function setModo(v) {
         if (v === '2') {
             if (bloqueListar) bloqueListar.style.display = 'none';
@@ -208,6 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const sel = getRolSelect();
             if (sel && sel.value) cargarPermisosDeRol(sel.value);
         }
+        syncPrimaryAction();
     }
 
     if (selectAccion) {
@@ -233,52 +259,47 @@ document.addEventListener('DOMContentLoaded', () => {
         rolSelectWired = true;
     };
 
-    // ====== Crear rol (AHORA ENVÍA PERMISOS)
-    if (btnCrearRol) {
-        btnCrearRol.addEventListener('click', async (e) => {
-            e.preventDefault();
+    async function crearRol() {
+        const name = (rolNameInput?.value || '').trim();
+        if (!name) {
+            toast('warning', 'Escribe el nombre del rol');
+            rolNameInput?.focus();
+            return;
+        }
 
-            const name = (rolNameInput?.value || '').trim();
-            if (!name) {
-                toast('warning', 'Escribe el nombre del rol');
-                return;
-            }
+        const ok = await confirmDialog({
+            title: '¿Crear rol?',
+            text: 'Se registrará un nuevo rol en el sistema con los permisos seleccionados.',
+            confirmText: 'Sí, crear'
+        });
+        if (!ok) return;
 
-            const ok = await confirmDialog({
-                title: '¿Crear rol?',
-                text: 'Se registrará un nuevo rol en el sistema con los permisos seleccionados.',
-                confirmText: 'Sí, crear'
-            });
-            if (!ok) return;
+        const perms = getPermsPayload();
 
-            const perms = getPermsPayload();
+        const fd = new FormData();
+        fd.append('action', 'create');
+        fd.append('name', name);
+        Object.entries(perms).forEach(([k, v]) => fd.append(k, v));
 
-            const fd = new FormData();
-            fd.append('action', 'create');
-            fd.append('name', name);
-            Object.entries(perms).forEach(([k, v]) => fd.append(k, v));
+        const resp = await fetchJSON(API, { method: 'POST', body: fd });
+        if (!resp.ok) {
+            toast('error', resp.msg || 'No se pudo crear');
+            return;
+        }
 
-            const resp = await fetchJSON(API, { method: 'POST', body: fd });
-            if (!resp.ok) {
-                toast('error', resp.msg || 'No se pudo crear');
-                return;
-            }
+        toast('success', resp.msg || 'Rol creado');
+        if (msgRolesTop) msgRolesTop.textContent = 'Rol creado correctamente';
+        if (rolNameInput) rolNameInput.value = '';
 
-            toast('success', resp.msg || 'Rol creado');
-            if (msgRolesTop) msgRolesTop.textContent = 'Rol creado correctamente';
-            rolNameInput.value = '';
+        await refrescarComboRoles(resp.id ? String(resp.id) : null);
 
-            // refresca combo y selecciona el rol nuevo por ID si viene
-            await refrescarComboRoles(resp.id ? String(resp.id) : null);
+        if (selectAccion) {
+            selectAccion.value = '1';
+            setModo('1');
+        }
 
-            if (selectAccion) {
-                selectAccion.value = '1';
-                setModo('1');
-            }
-
-            const sel = getRolSelect();
-            if (sel && sel.value) await cargarPermisosDeRol(sel.value);
-        }, true);
+        const sel = getRolSelect();
+        if (sel && sel.value) await cargarPermisosDeRol(sel.value);
     }
 
     // ====== Eliminar rol (MUESTRA USUARIOS SI NO SE PUEDE)
@@ -339,40 +360,81 @@ document.addEventListener('DOMContentLoaded', () => {
         }, true);
     }
 
-    // ====== Guardar permisos
+    async function guardarPermisosRol() {
+        const sel = getRolSelect();
+        const rolId = sel ? sel.value : '';
+        if (!rolId) {
+            toast('warning', 'Selecciona un rol para guardar permisos');
+            return;
+        }
+
+        const ok = await confirmDialog({
+            title: '¿Guardar cambios?',
+            text: 'Se actualizarán los permisos del rol seleccionado.',
+            confirmText: 'Sí, guardar'
+        });
+        if (!ok) return;
+
+        const perms = getPermsPayload();
+
+        const fd = new FormData();
+        fd.append('action', 'savePerms');
+        fd.append('id', rolId);
+        Object.entries(perms).forEach(([k, v]) => fd.append(k, v));
+
+        const resp = await fetchJSON(API, { method: 'POST', body: fd });
+        if (!resp.ok) {
+            toast('error', resp.msg || 'No se pudo guardar permisos');
+            return;
+        }
+
+        toast('success', resp.msg || 'Permisos guardados');
+        if (msgPermTop) msgPermTop.textContent = 'Permisos guardados';
+    }
+
     if (btnGuardarPermisos) {
         btnGuardarPermisos.addEventListener('click', async (e) => {
             e.preventDefault();
 
+            if (isModoCrear()) {
+                await crearRol();
+                return;
+            }
+
+            await guardarPermisosRol();
+        }, true);
+    }
+
+    if (rolNameInput) {
+        rolNameInput.addEventListener('keydown', async (e) => {
+            if (e.key !== 'Enter' || !isModoCrear()) return;
+            e.preventDefault();
+            await crearRol();
+        });
+    }
+
+    if (btnLimpiarPermisos) {
+        btnLimpiarPermisos.addEventListener('click', async (e) => {
+            e.preventDefault();
+
+            if (isModoCrear()) {
+                if (rolNameInput) rolNameInput.value = '';
+                resetChecks();
+                if (msgRolesTop) msgRolesTop.textContent = '';
+                if (msgPermTop) msgPermTop.textContent = '';
+                rolNameInput?.focus();
+                return;
+            }
+
             const sel = getRolSelect();
-            const rolId = sel ? sel.value : '';
-            if (!rolId) {
-                toast('warning', 'Selecciona un rol para guardar permisos');
+            if (!sel || !sel.value) {
+                resetChecks();
+                if (msgPermTop) msgPermTop.textContent = '';
                 return;
             }
 
-            const ok = await confirmDialog({
-                title: '¿Guardar cambios?',
-                text: 'Se actualizarán los permisos del rol seleccionado.',
-                confirmText: 'Sí, guardar'
-            });
-            if (!ok) return;
-
-            const perms = getPermsPayload();
-
-            const fd = new FormData();
-            fd.append('action', 'savePerms');
-            fd.append('id', rolId);
-            Object.entries(perms).forEach(([k, v]) => fd.append(k, v));
-
-            const resp = await fetchJSON(API, { method: 'POST', body: fd });
-            if (!resp.ok) {
-                toast('error', resp.msg || 'No se pudo guardar permisos');
-                return;
-            }
-
-            toast('success', resp.msg || 'Permisos guardados');
-            if (msgPermTop) msgPermTop.textContent = 'Permisos guardados';
+            await cargarPermisosDeRol(sel.value);
+            toast('success', 'Permisos recargados');
         }, true);
     }
 

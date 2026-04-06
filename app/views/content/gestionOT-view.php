@@ -138,7 +138,7 @@
         <div class="card mb-4">
             <div class="card-header">
                 <!-- izquierda, como herramientas -->
-                <button type="button" class="btn btn-sm btn-primary" onclick="reiniciarTablaOT('<?php echo APP_URL; ?>')" title="Recargar Tabla">
+                <button type="button" class="btn btn-sm btn-primary" id="btnRecargarOT" title="Recargar Tabla">
                     <i class="bi bi-arrow-clockwise"></i>
                 </button>
                 <strong>Lista de Órdenes de Trabajo</strong>

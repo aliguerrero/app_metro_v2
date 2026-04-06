@@ -223,14 +223,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            document.getElementById('edit_id_ai_empleado').value = resp.data.id_ai_empleado || '';
-            document.getElementById('edit_nacionalidad').value = resp.data.nacionalidad || 'V';
-            document.getElementById('edit_id_empleado').value = resp.data.id_empleado || '';
-            document.getElementById('edit_nombre_empleado').value = resp.data.nombre_empleado || '';
-            document.getElementById('edit_telefono').value = resp.data.telefono || '';
-            document.getElementById('edit_correo').value = resp.data.correo || '';
-            document.getElementById('edit_direccion').value = resp.data.direccion || '';
-            document.getElementById('edit_id_ai_categoria_empleado').value = resp.data.id_ai_categoria_empleado || '';
+            const pkInput = formUpdate.querySelector('#edit_id_ai_empleado');
+            const nacionalidadInput = formUpdate.querySelector('#edit_nacionalidad');
+            const idEmpleadoInput = formUpdate.querySelector('#edit_id_empleado');
+            const nombreInput = formUpdate.querySelector('#edit_nombre_empleado');
+            const telefonoInput = formUpdate.querySelector('#edit_telefono');
+            const correoInput = formUpdate.querySelector('#edit_correo');
+            const direccionInput = formUpdate.querySelector('#edit_direccion');
+            const categoriaInput = formUpdate.querySelector('[name="id_ai_categoria_empleado"]');
+
+            if (pkInput) {
+                pkInput.value = resp.data.id_ai_empleado || '';
+            }
+            if (nacionalidadInput) {
+                nacionalidadInput.value = resp.data.nacionalidad || 'V';
+            }
+            if (idEmpleadoInput) {
+                idEmpleadoInput.value = resp.data.id_empleado || '';
+            }
+            if (nombreInput) {
+                nombreInput.value = resp.data.nombre_empleado || '';
+            }
+            if (telefonoInput) {
+                telefonoInput.value = resp.data.telefono || '';
+            }
+            if (correoInput) {
+                correoInput.value = resp.data.correo || '';
+            }
+            if (direccionInput) {
+                direccionInput.value = resp.data.direccion || '';
+            }
+            if (categoriaInput) {
+                categoriaInput.value = resp.data.id_ai_categoria_empleado || '';
+            }
 
             if (updateModalEl && window.bootstrap) {
                 bootstrap.Modal.getOrCreateInstance(updateModalEl).show();

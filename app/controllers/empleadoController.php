@@ -392,7 +392,7 @@ class empleadoController extends mainModel
                                 <th>Categoria</th>
                                 <th>Contacto</th>
                                 <th>Usuario sistema</th>
-                                <th class="text-center" colspan="2">Acciones</th>
+                                <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>';
@@ -415,6 +415,15 @@ class empleadoController extends mainModel
                 $direccion = $this->construirDatoOpcional($row['direccion'] ?? '', 'Sin direccion');
                 $contacto = $this->construirResumenContacto($telefono, $correo);
                 $usuarioSistema = (string)$row['usuario_sistema'];
+                $acciones = '
+                    <div class="tools-action-group" role="group" aria-label="Acciones de empleado">
+                        <a href="#" class="btn btn-warning text-dark js-emp-edit" data-id="' . $idAi . '" title="Modificar">
+                            <i class="bi bi-pencil text-white"></i>
+                        </a>
+                        <a href="#" class="btn btn-danger js-emp-del" data-id="' . $idAi . '" title="Eliminar">
+                            <i class="bi bi-trash" style="color:white;"></i>
+                        </a>
+                    </div>';
 
                 $tabla .= '
                     <tr class="align-middle">
@@ -427,16 +436,7 @@ class empleadoController extends mainModel
                             <div class="small text-muted">' . $this->esc($direccion) . '</div>
                         </td>
                         <td>' . $this->esc($usuarioSistema) . '</td>
-                        <td class="text-center">
-                            <a href="#" class="btn btn-warning text-dark js-emp-edit" data-id="' . $idAi . '" title="Modificar">
-                                <i class="bi bi-pencil text-white"></i>
-                            </a>
-                        </td>
-                        <td class="text-center">
-                            <a href="#" class="btn btn-danger js-emp-del" data-id="' . $idAi . '" title="Eliminar">
-                                <i class="bi bi-trash" style="color:white;"></i>
-                            </a>
-                        </td>
+                        <td class="action-cell text-center">' . $acciones . '</td>
                     </tr>';
 
                 $cards .= '
@@ -462,14 +462,7 @@ class empleadoController extends mainModel
                                 <div class="tool-label">Usuario</div>
                                 <div class="tool-value">' . $this->esc($usuarioSistema) . '</div>
                             </div>
-                            <div class="tool-actions">
-                                <a href="#" class="btn btn-warning text-dark btn-sm js-emp-edit" data-id="' . $idAi . '" title="Modificar">
-                                    <i class="bi bi-pencil text-white"></i>
-                                </a>
-                                <a href="#" class="btn btn-danger btn-sm js-emp-del" data-id="' . $idAi . '" title="Eliminar">
-                                    <i class="bi bi-trash"></i>
-                                </a>
-                            </div>
+                            <div class="tool-actions">' . $acciones . '</div>
                         </div>
                     </div>';
 
@@ -478,7 +471,7 @@ class empleadoController extends mainModel
         } else {
             $tabla .= '
                 <tr class="align-middle">
-                    <td class="text-center" colspan="8">No hay empleados registrados</td>
+                    <td class="text-center" colspan="7">No hay empleados registrados</td>
                 </tr>';
 
             $cards .= '

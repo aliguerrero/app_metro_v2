@@ -67,15 +67,10 @@
             <!-- NUEVO -->
             <div id="nuevo" style="display:none;" class="mt-3">
                 <label class="form-label"><b>Nuevo Rol</b></label>
-                <div class="input-group flex-nowrap w-100">
+                <div class="w-100">
                     <input class="form-control" id="rol_name" type="text" placeholder="Nombre del rol">
-
-                    <button class="btn btn-success flex-shrink-0" type="button" id="btnCrearRol" title="Guardar">
-                        <i class="bi bi-save"></i>
-                        <span class="d-none d-md-inline ms-1">Guardar</span>
-                    </button>
                 </div>
-                <div class="form-text">Escribe el nombre y guarda para crear el rol.</div>
+                <div class="form-text">Escribe el nombre del rol y usa el boton principal de abajo para crearlo.</div>
             </div>
         </div>
     </div>
@@ -236,9 +231,10 @@
     <div class="col-12">
         <div class="btn-group w-100" role="group" aria-label="Acciones permisos">
             <button type="button" class="btn bg-success text-white" id="btnGuardarPermisos">
-                <i class="bi bi-check2-circle me-1"></i> Guardar cambios
+                <i class="bi bi-check2-circle me-1" id="btnRolesPrimaryIcon"></i>
+                <span id="btnRolesPrimaryText">Guardar cambios</span>
             </button>
-            <button type="reset" class="btn bg-danger text-white" id="btnLimpiarPermisos">
+            <button type="button" class="btn bg-danger text-white" id="btnLimpiarPermisos">
                 <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar
             </button>
         </div>

@@ -193,51 +193,40 @@ class otController extends mainModel
     }
 
     # DefiniciÃƒÂ³n de un array asociativo $miembro_datos_reg que contiene los datos del miembro a registrar
-    $ot_datos_reg = [
-      [
-        'campo_nombre' => 'nombre_trab',
-        'campo_marcador' => ':trabajo',
-        'campo_valor' => $nombre =  mb_strtoupper($nombre, 'UTF-8')
-      ],
-      [
-        'campo_nombre' => 'id_ai_sitio',
-        'campo_marcador' => ':sitio',
-        'campo_valor' => $sitio
-      ],
-      [
-        'campo_nombre' => 'fecha',
-        'campo_marcador' => ':fecha',
-        'campo_valor' => $fecha
-      ],
-      [
-        'campo_nombre' => 'semana',
-        'campo_marcador' => ':semana',
-        'campo_valor' => $semana
-      ],
-      [
-        'campo_nombre' => 'mes',
-        'campo_marcador' => ':mes',
-        'campo_valor' => $mes
-      ]
-    ];
-    $condicion = [
-      'condicion_campo' => 'n_ot',
-      'condicion_marcador' => ':ID',
-      'condicion_valor' => $id
-    ];
+    try {
+      $resultado = $this->ejecutarProcedimientoFila(
+        'CALL sp_ot_actualizar(:n_ot, :id_ai_sitio, :nombre_trab, :fecha, :semana, :mes, :id_user_operacion)',
+        [
+          ':n_ot' => $id,
+          ':id_ai_sitio' => (int)$sitio,
+          ':nombre_trab' => mb_strtoupper($nombre, 'UTF-8'),
+          ':fecha' => $fecha,
+          ':semana' => $semana,
+          ':mes' => $mes,
+          ':id_user_operacion' => (string)($_SESSION['id_user'] ?? $_SESSION['id'] ?? ''),
+        ]
+      );
 
-    if ($this->actualizarDatos('orden_trabajo', $ot_datos_reg, $condicion)) {
-      $alerta = [
-        'tipo' => 'limpiar',
-        'titulo' => 'Datos Actualizados',
-        'texto' => 'Se actualizo correctamente',
-        'icono' => 'success'
-      ];
-    } else {
+      if ($resultado !== null) {
+        $alerta = [
+          'tipo' => 'limpiar',
+          'titulo' => 'Datos Actualizados',
+          'texto' => 'Se actualizo correctamente',
+          'icono' => 'success'
+        ];
+      } else {
+        $alerta = [
+          'tipo' => 'simple',
+          'titulo' => 'Ocurrio un error inesperado',
+          'texto' => 'Ha ocurrido un error durante la actualizacion!',
+          'icono' => 'error'
+        ];
+      }
+    } catch (\Throwable $e) {
       $alerta = [
         'tipo' => 'simple',
         'titulo' => 'Ocurrio un error inesperado',
-        'texto' => 'Ha ocurrido un error durante el registro!',
+        'texto' => 'No se pudo actualizar la O.T.: ' . $e->getMessage(),
         'icono' => 'error'
       ];
     }
@@ -1424,18 +1413,23 @@ class otController extends mainModel
 
     $ot = $st->fetch(\PDO::FETCH_ASSOC);
 
-    // Soft delete recomendado (mantiene FK/history)
-    $ok = $this->actualizarDatos(
-      "orden_trabajo",
-      [
-        ["campo_nombre" => "std_reg", "campo_marcador" => ":std", "campo_valor" => 0],
-      ],
-      [
-        "condicion_campo"    => "n_ot",
-        "condicion_marcador" => ":id",
-        "condicion_valor"    => $id
-      ]
-    );
+    try {
+      $resultado = $this->ejecutarProcedimientoFila(
+        'CALL sp_ot_eliminar_logico(:n_ot, :id_user_operacion)',
+        [
+          ':n_ot' => $id,
+          ':id_user_operacion' => (string)($_SESSION['id_user'] ?? $_SESSION['id'] ?? ''),
+        ]
+      );
+      $ok = ($resultado !== null);
+    } catch (\Throwable $e) {
+      return json_encode([
+        'tipo'   => 'simple',
+        'titulo' => 'Ocurrio un error inesperado',
+        'texto'  => 'No se pudo eliminar la O.T.: ' . $e->getMessage(),
+        'icono'  => 'error'
+      ], JSON_UNESCAPED_UNICODE);
+    }
 
     if ($ok) {
       return json_encode([

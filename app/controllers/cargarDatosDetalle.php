@@ -276,16 +276,20 @@ try {
             );
         }
 
-        $stmt = $mainModel->ejecutarConsultaConParametros(
-            "DELETE FROM detalle_orden
-             WHERE n_ot = :not
-               AND $pk = :id
-               AND fecha = :fecha",
-            [':not' => $codigo, ':id' => (int)$id, ':fecha' => $fecha]
+        if ($pk !== 'id_ai_detalle') {
+            fail("schema_no_compatible", "La estructura actual de detalle_orden no es compatible con la eliminacion segura.", 500);
+        }
+
+        $deleted = $mainModel->ejecutarProcedimientoFila(
+            "CALL sp_ot_eliminar_detalle(:id_ai_detalle, :not, :id_user_operacion)",
+            [
+                ':id_ai_detalle' => (int)$id,
+                ':not' => $codigo,
+                ':id_user_operacion' => (string)($_SESSION['id_user'] ?? $_SESSION['id'] ?? ''),
+            ]
         );
 
-        $deleted = ($stmt && method_exists($stmt, 'rowCount') && $stmt->rowCount() > 0);
-        jsonResponse(["ok" => $deleted]);
+        jsonResponse(["ok" => ($deleted !== null), "data" => $deleted]);
     }
 
     // ==========================
@@ -475,50 +479,38 @@ try {
     // UPDATE
     // ==========================
     if ($idDet !== '') {
-        $idInt = (int)$idDet;
+        if ($pk !== 'id_ai_detalle') {
+            fail("schema_no_compatible", "La estructura actual de detalle_orden no es compatible con la actualizacion segura.", 500);
+        }
 
-        // 1) update estricto (n_ot + fecha + pk)
-        $st = $mainModel->ejecutarConsultaConParametros(
-            "UPDATE detalle_orden
-             SET {$updateSetSql}
-             WHERE n_ot = :not
-               AND fecha = :fecha
-               AND $pk = :id",
-            $params + [':id' => $idInt]
+        $idInt = (int)$idDet;
+        $result = $mainModel->ejecutarProcedimientoFila(
+            "CALL sp_ot_actualizar_detalle(
+                :id_ai_detalle,
+                :not,
+                :fecha,
+                :desc,
+                :turno,
+                :cco,
+                :tec,
+                :ccf,
+                :cant,
+                :hora_inicio,
+                :hora_fin,
+                :obs,
+                :id_user_operacion
+            )",
+            $params + [
+                ':id_ai_detalle' => $idInt,
+                ':id_user_operacion' => (string)($_SESSION['id_user'] ?? $_SESSION['id'] ?? ''),
+            ]
         );
 
-        $rows = ($st && method_exists($st, 'rowCount')) ? (int)$st->rowCount() : 0;
-
-        // 0 filas puede ser "sin cambios"
-        if ($rows === 0 && existsDetalle($mainModel, $pk, $codigo, $idInt, $fecha)) {
-            jsonResponse(["ok" => true, "modo" => "update", "sin_cambios" => true]);
-        }
-
-        // 2) fallback si la fecha no coincide (actualiza por n_ot + pk y setea fecha)
-        if ($rows === 0) {
-            $st2 = $mainModel->ejecutarConsultaConParametros(
-                "UPDATE detalle_orden
-                 SET fecha          = :fecha,
-                     {$updateSetSql}
-                 WHERE n_ot = :not
-                   AND $pk = :id",
-                $params + [':id' => $idInt]
-            );
-
-            $rows2 = ($st2 && method_exists($st2, 'rowCount')) ? (int)$st2->rowCount() : 0;
-
-            if ($rows2 === 0 && existsDetalle($mainModel, $pk, $codigo, $idInt, null)) {
-                jsonResponse(["ok" => true, "modo" => "update", "sin_cambios" => true, "fallback" => true]);
-            }
-
-            if ($rows2 === 0) {
-                fail("no_actualizo", "No se pudo actualizar el registro. Vuelve a cargar el detalle e intenta nuevamente.", 409);
-            }
-
-            jsonResponse(["ok" => true, "modo" => "update", "fallback" => true]);
-        }
-
-        jsonResponse(["ok" => true, "modo" => "update"]);
+        jsonResponse([
+            "ok" => ($result !== null),
+            "modo" => "update",
+            "data" => $result
+        ]);
     }
 
     // ==========================

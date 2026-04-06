@@ -55,7 +55,7 @@
                 <div class="col-12 col-lg-6">
                     <label class="form-label"><b>Usuario (correo)</b></label>
                     <input class="form-control" type="email" id="smtp_username" name="username"
-                        placeholder="tucuenta@gmail.com">
+                        placeholder="tucuenta@gmail.com" autocomplete="username">
                 </div>
 
                 <div class="col-12 col-lg-6">
@@ -76,7 +76,7 @@
                 <div class="col-12 col-lg-6">
                     <label class="form-label"><b>From (correo)</b></label>
                     <input class="form-control" type="email" id="smtp_from_email" name="from_email"
-                        placeholder="tucuenta@gmail.com">
+                        placeholder="tucuenta@gmail.com" autocomplete="email">
                 </div>
 
                 <div class="col-12 col-lg-6">
@@ -108,7 +108,8 @@
         <div class="row g-3 align-items-end">
             <div class="col-12 col-lg-8">
                 <label class="form-label"><b>Enviar a (correo destino)</b></label>
-                <input class="form-control" type="email" id="smtp_test_to" placeholder="destino@correo.com">
+                <input class="form-control" type="email" id="smtp_test_to" placeholder="destino@correo.com"
+                    autocomplete="email">
                 <div class="form-text">
                     La prueba usa la configuracion actual guardada en el sistema.
                 </div>

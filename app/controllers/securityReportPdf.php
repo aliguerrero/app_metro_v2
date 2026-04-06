@@ -23,6 +23,31 @@ function reportPdo(string $user, string $pass): PDO
     );
 }
 
+function reportPdoWithFallback(array $candidates): array
+{
+    $lastException = null;
+
+    foreach ($candidates as $index => $candidate) {
+        $user = (string)($candidate['user'] ?? '');
+        $pass = (string)($candidate['pass'] ?? '');
+        if ($user === '') {
+            continue;
+        }
+
+        try {
+            return [
+                'pdo' => reportPdo($user, $pass),
+                'user' => $user,
+                'used_fallback' => $index > 0,
+            ];
+        } catch (PDOException $e) {
+            $lastException = $e;
+        }
+    }
+
+    throw $lastException ?? new RuntimeException('No se pudo abrir la conexion para el informe de seguridad.');
+}
+
 function fetchScalar(PDO $pdo, string $sql, array $params = [])
 {
     $stmt = $pdo->prepare($sql);
@@ -50,8 +75,18 @@ function renderGrantItems(array $grants): string
     return $html !== '' ? $html : '<li>Sin grants visibles.</li>';
 }
 
-$appPdo = reportPdo(DB_USER, DB_PASS);
-$authPdo = reportPdo(DB_AUTH_USER, DB_AUTH_PASS);
+$appConn = reportPdoWithFallback([
+    ['user' => DB_USER, 'pass' => DB_PASS],
+]);
+$authConn = reportPdoWithFallback([
+    ['user' => DB_AUTH_USER, 'pass' => DB_AUTH_PASS],
+    ['user' => DB_USER, 'pass' => DB_PASS],
+]);
+
+$appPdo = $appConn['pdo'];
+$authPdo = $authConn['pdo'];
+$authUserConnected = (string)$authConn['user'];
+$authUsedFallback = !empty($authConn['used_fallback']);
 $generatedAt = date('Y-m-d H:i:s');
 $download = appsec_request_string('download') === '1';
 
@@ -154,7 +189,7 @@ $html = '
     <h3>3.1 Modelo de cuentas</h3>
     <table class="grid">
         <tr><th>Cuenta operativa</th><td>' . h(DB_USER) . ' conectada a ' . h(DB_SERVER) . '. Su rol es atender la operacion normal de la app con privilegios DML sobre la base principal.</td></tr>
-        <tr><th>Cuenta privilegiada</th><td>' . h(DB_AUTH_USER) . ' conectada a ' . h(DB_SERVER) . '. Se reserva para respaldo, restauracion y tareas de base de datos que requieren permisos mas altos.</td></tr>
+        <tr><th>Cuenta privilegiada</th><td>' . h($authUserConnected) . ' conectada a ' . h(DB_SERVER) . '. Se reserva para respaldo, restauracion y tareas de base de datos que requieren permisos mas altos.' . ($authUsedFallback ? ' En esta instalacion se uso la cuenta operativa como respaldo porque la cuenta privilegiada configurada no estuvo disponible.' : '') . '</td></tr>
         <tr><th>Bind address</th><td>' . h($bindAddress !== '' ? $bindAddress : DB_SERVER) . '. El servicio queda atendiendo de forma local y no expuesto como listener global.</td></tr>
         <tr><th>Version</th><td>' . h($dbVersion) . '</td></tr>
     </table>

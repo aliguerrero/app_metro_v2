@@ -167,9 +167,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            document.getElementById('edit_id_ai_categoria_empleado').value = resp.data.id_ai_categoria_empleado || '';
-            document.getElementById('edit_nombre_categoria').value = resp.data.nombre_categoria || '';
-            document.getElementById('edit_descripcion_categoria').value = resp.data.descripcion || '';
+            const idInput = formUpdate?.querySelector('[name="id_ai_categoria_empleado"]');
+            const nombreInput = formUpdate?.querySelector('#edit_nombre_categoria');
+            const descripcionInput = formUpdate?.querySelector('#edit_descripcion_categoria');
+
+            if (idInput) {
+                idInput.value = resp.data.id_ai_categoria_empleado || '';
+            }
+            if (nombreInput) {
+                nombreInput.value = resp.data.nombre_categoria || '';
+            }
+            if (descripcionInput) {
+                descripcionInput.value = resp.data.descripcion || '';
+            }
 
             if (modalEl && window.bootstrap) {
                 bootstrap.Modal.getOrCreateInstance(modalEl).show();

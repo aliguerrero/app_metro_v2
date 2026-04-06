@@ -1,13 +1,32 @@
-// Esperar a que el DOM este completamente cargado
-document.addEventListener('DOMContentLoaded', function () {
-    // Obtener el modal de modificacion por su ID
+function obtenerTablaOtBody() {
+    const tabla = document.getElementById('tablaDatosOt');
+    if (!tabla) {
+        return null;
+    }
+
+    return tabla.getElementsByTagName('tbody')[0] || null;
+}
+
+function initBuscadorOt() {
+    if (window.__buscadorOtInicializado === true) {
+        return;
+    }
+
+    const urlInput = document.getElementById('url');
+    const btnBuscarOt = document.getElementById('btnBuscarOt');
+    const btnBuscarFecha = document.getElementById('btnBuscarFecha');
+    const btnBuscarEstado = document.getElementById('btnBuscarEstado');
+    const btnBuscarUser = document.getElementById('btnBuscarUser');
+    const btnRecargarOT = document.getElementById('btnRecargarOT');
+
+    if (!urlInput || !btnBuscarOt || !btnBuscarFecha || !btnBuscarEstado || !btnBuscarUser) {
+        return;
+    }
+
+    window.__buscadorOtInicializado = true;
+
     let tipoBusqueda = '';
-    let dir = document.getElementById('url').value;
-    let btnBuscarOt = document.getElementById('btnBuscarOt');
-    let btnBuscarFecha = document.getElementById('btnBuscarFecha');
-    let btnBuscarEstado = document.getElementById('btnBuscarEstado');
-    let btnBuscarUser = document.getElementById('btnBuscarUser');
-    let btnRecargarOT = document.getElementById('btnRecargarOT');
+    let dir = urlInput.value;
 
     // Agregar un listener para el evento "shown.bs.modal", que se dispara cuando el modal se muestra al usuario
     btnBuscarOt.addEventListener('click', function (event) {
@@ -232,12 +251,33 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
- 
-});
+    if (btnRecargarOT) {
+        btnRecargarOT.addEventListener('click', function () {
+            reiniciarTablaOT(dir);
+        });
+    }
+
+    const tablaBody = obtenerTablaOtBody();
+    if (tablaBody && tablaBody.children.length === 0) {
+        reiniciarTablaOT(dir);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initBuscadorOt);
+} else {
+    initBuscadorOt();
+}
 
 
 
 function reiniciarTablaOT(dir) {
+    const tabla = obtenerTablaOtBody();
+    if (!tabla) {
+        console.warn('No se encontro el cuerpo de la tabla de OT.');
+        return;
+    }
+
     let tipoBusqueda = 'todo';
     $.ajax({
         url: dir + 'app/controllers/cargarDatosBuscadorOt.php',
@@ -246,7 +286,6 @@ function reiniciarTablaOT(dir) {
         cache: false,
         data: { tipoBusqueda: tipoBusqueda, _ts: Date.now() },
         success: function (data) {
-            let tabla = document.getElementById('tablaDatosOt').getElementsByTagName('tbody')[0];
             tabla.innerHTML = '';
 
             if (Array.isArray(data) && data.length > 0) {
@@ -266,6 +305,8 @@ function reiniciarTablaOT(dir) {
         }
     });
 }
+
+window.reiniciarTablaOT = reiniciarTablaOT;
 
 function tablaOtVacia() {
     tabla = `

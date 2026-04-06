@@ -325,48 +325,7 @@ try {
     jsonResponse(["ok" => false, "tipo" => "simple", "icono" => "warning", "titulo" => "No disponible", "texto" => "Herramienta deshabilitada."], 409);
   }
 
-  // Cantidad actual en OT (SUMA, por si hay duplicados)
-  $stCur = $mainModel->ejecutarConsultaConParametros(
-    "SELECT COALESCE(SUM(cantidadot),0) AS cur
-         FROM herramientaot
-         WHERE n_ot = :ot AND id_ai_herramienta = :hid
-           AND {$estadoHerrExpr} <> 'LIBERADA'",
-    [':ot' => $ot, ':hid' => (int)$herrId]
-  );
-  $cur = $stCur ? (int)$stCur->fetchColumn() : 0;
-
-  // Disponibilidad global actual (total - ocupada)
-  $stDisp = $mainModel->ejecutarConsultaConParametros(
-    "SELECT (h.cantidad - COALESCE(occ.ocupada,0)) AS disp
-         FROM herramienta h
-         LEFT JOIN (
-            SELECT id_ai_herramienta, SUM(cantidadot) AS ocupada
-            FROM herramientaot
-            WHERE {$estadoHerrExpr} <> 'LIBERADA'
-            GROUP BY id_ai_herramienta
-         ) occ ON h.id_ai_herramienta = occ.id_ai_herramienta
-         WHERE h.id_ai_herramienta = :id AND h.std_reg='1'
-         LIMIT 1",
-    [':id' => (int)$herrId]
-  );
-  $disp = ($stDisp && $stDisp->rowCount() > 0) ? (int)$stDisp->fetchColumn() : 0;
-
-  // Helper: deja 1 sola fila por OT+Herr (evita duplicados)
-  $normalizarSet = function (int $newQty) use ($mainModel, $ot, $herrId, $estadoHerrExpr, $estadoHerrCol) {
-    // borra duplicados
-    $mainModel->ejecutarConsultaConParametros(
-      "DELETE FROM herramientaot
-       WHERE n_ot = :ot AND id_ai_herramienta = :hid
-         AND {$estadoHerrExpr} <> 'LIBERADA'",
-      [':ot' => $ot, ':hid' => (int)$herrId]
-    );
-    // inserta una sola
-    $mainModel->ejecutarConsultaConParametros(
-      "INSERT INTO herramientaot (id_ai_herramienta, n_ot, cantidadot, `{$estadoHerrCol}`)
-             VALUES (:hid, :ot, :cant, 'ASIGNADA')",
-      [':hid' => (int)$herrId, ':ot' => $ot, ':cant' => $newQty]
-    );
-  };
+  $idUserOperacion = (string)($_SESSION['id_user'] ?? $_SESSION['id'] ?? '');
 
   // ========= agregar =========
   if ($tipo === 'agregar') {
@@ -374,15 +333,26 @@ try {
       jsonResponse(["ok" => false, "tipo" => "simple", "icono" => "warning", "titulo" => "Cantidad invalida", "texto" => "Minimo 1."], 400);
     }
 
-    $mainModel->ejecutarProcedimientoFila(
-      "CALL sp_ot_asignar_herramienta(:ot, :hid, :cant, :id_user_operacion)",
-      [
-        ':ot' => $ot,
-        ':hid' => (int)$herrId,
-        ':cant' => (int)$cant,
-        ':id_user_operacion' => (string)($_SESSION['id_user'] ?? $_SESSION['id'] ?? ''),
-      ]
-    );
+    try {
+      $mainModel->ejecutarProcedimientoFila(
+        "CALL sp_ot_asignar_herramienta(:ot, :hid, :cant, :id_user_operacion)",
+        [
+          ':ot' => $ot,
+          ':hid' => (int)$herrId,
+          ':cant' => (int)$cant,
+          ':id_user_operacion' => $idUserOperacion,
+        ]
+      );
+    } catch (Throwable $e) {
+      $msg = $e->getMessage();
+      if (stripos($msg, 'disponibilidad') !== false) {
+        jsonResponse(["ok" => false, "tipo" => "simple", "icono" => "info", "titulo" => "Sin disponibilidad", "texto" => "No hay disponibilidad suficiente para asignar la herramienta."], 409);
+      }
+      if (stripos($msg, 'bloqueada') !== false) {
+        jsonResponse(["ok" => false, "tipo" => "simple", "icono" => "info", "titulo" => "O.T. bloqueada", "texto" => "La O.T. ya no admite cambios en herramientas."], 409);
+      }
+      throw $e;
+    }
 
     jsonResponse(["ok" => true, "tipo" => "simple", "icono" => "success", "titulo" => "Asignada", "texto" => "Herramienta asignada."]);
   }
@@ -394,33 +364,53 @@ try {
     }
     $new = (int)$cant;
 
-    if ($new === 0) {
-      $mainModel->ejecutarConsultaConParametros(
-        "DELETE FROM herramientaot
-         WHERE n_ot = :ot AND id_ai_herramienta = :hid
-           AND {$estadoHerrExpr} <> 'LIBERADA'",
-        [':ot' => $ot, ':hid' => (int)$herrId]
+    try {
+      $mainModel->ejecutarProcedimientoFila(
+        "CALL sp_ot_set_herramienta_cantidad(:ot, :hid, :cant, :id_user_operacion)",
+        [
+          ':ot' => $ot,
+          ':hid' => (int)$herrId,
+          ':cant' => $new,
+          ':id_user_operacion' => $idUserOperacion,
+        ]
       );
+    } catch (Throwable $e) {
+      $msg = $e->getMessage();
+      if (stripos($msg, 'disponibilidad') !== false) {
+        jsonResponse(["ok" => false, "tipo" => "simple", "icono" => "info", "titulo" => "Sin disponibilidad", "texto" => "No hay disponibilidad para actualizar la herramienta."], 409);
+      }
+      if (stripos($msg, 'bloqueada') !== false) {
+        jsonResponse(["ok" => false, "tipo" => "simple", "icono" => "info", "titulo" => "O.T. bloqueada", "texto" => "La O.T. ya no admite cambios en herramientas."], 409);
+      }
+      throw $e;
+    }
+
+    if ($new === 0) {
       jsonResponse(["ok" => true, "tipo" => "simple", "icono" => "success", "titulo" => "Quitada", "texto" => "Herramienta quitada."]);
     }
 
-    $delta = $new - $cur;
-    if ($delta > 0 && $delta > $disp) {
-      jsonResponse(["ok" => false, "tipo" => "simple", "icono" => "info", "titulo" => "Sin disponibilidad", "texto" => "No hay disponibilidad para aumentar."], 409);
-    }
-
-    $normalizarSet($new);
     jsonResponse(["ok" => true, "tipo" => "simple", "icono" => "success", "titulo" => "Actualizada", "texto" => "Cantidad actualizada."]);
   }
 
   // ========= quitar =========
   if ($tipo === 'quitar') {
-    $mainModel->ejecutarConsultaConParametros(
-      "DELETE FROM herramientaot
-       WHERE n_ot = :ot AND id_ai_herramienta = :hid
-         AND {$estadoHerrExpr} <> 'LIBERADA'",
-      [':ot' => $ot, ':hid' => (int)$herrId]
-    );
+    try {
+      $mainModel->ejecutarProcedimientoFila(
+        "CALL sp_ot_set_herramienta_cantidad(:ot, :hid, :cant, :id_user_operacion)",
+        [
+          ':ot' => $ot,
+          ':hid' => (int)$herrId,
+          ':cant' => 0,
+          ':id_user_operacion' => $idUserOperacion,
+        ]
+      );
+    } catch (Throwable $e) {
+      $msg = $e->getMessage();
+      if (stripos($msg, 'bloqueada') !== false) {
+        jsonResponse(["ok" => false, "tipo" => "simple", "icono" => "info", "titulo" => "O.T. bloqueada", "texto" => "La O.T. ya no admite cambios en herramientas."], 409);
+      }
+      throw $e;
+    }
     jsonResponse(["ok" => true, "tipo" => "simple", "icono" => "success", "titulo" => "Quitada", "texto" => "Herramienta quitada."]);
   }
 

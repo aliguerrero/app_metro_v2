@@ -7,6 +7,10 @@
     const fileInput = document.getElementById('restoreSqlFile');
     const confirmInput = document.getElementById('restoreConfirmText');
     const safetyCheck = document.getElementById('createSafetyBackup');
+    const btnRestore = document.getElementById('btnRestaurarDb');
+    const busyState = document.getElementById('dbBackupBusyState');
+    const busyTitle = document.getElementById('dbBackupBusyTitle');
+    const busyText = document.getElementById('dbBackupBusyText');
 
     const useSpecificTables = document.getElementById('backupUseSpecificTables');
     const tablesPicker = document.getElementById('backupTablesPicker');
@@ -47,6 +51,7 @@
 
     let cachedTables = [];
     let autoConfigState = null;
+    let backupActionBusy = false;
 
     const escapeHtml = (text) => {
         return String(text || '')
@@ -84,6 +89,107 @@
         });
     };
 
+    function setButtonBusy(button, busy, label = '') {
+        if (!button) return;
+
+        if (busy) {
+            if (!button.dataset.originalHtml) {
+                button.dataset.originalHtml = button.innerHTML;
+            }
+
+            const safeLabel = String(label || '').trim();
+            const spinner = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>';
+            button.innerHTML = safeLabel !== ''
+                ? `${spinner}<span class="ms-2">${escapeHtml(safeLabel)}</span>`
+                : spinner;
+            button.disabled = true;
+            button.classList.add('is-busy');
+            return;
+        }
+
+        if (button.dataset.originalHtml) {
+            button.innerHTML = button.dataset.originalHtml;
+        }
+        button.disabled = false;
+        button.classList.remove('is-busy');
+    }
+
+    function setTableCheckboxesDisabled(disabled) {
+        if (tablesList) {
+            tablesList.querySelectorAll('.js-backup-table').forEach((el) => {
+                el.disabled = !!disabled;
+            });
+        }
+    }
+
+    function setListActionButtonsDisabled(disabled) {
+        if (!wrap) return;
+
+        wrap.querySelectorAll('.js-db-backup-restore, .js-db-backup-download, .js-db-backup-delete').forEach((button) => {
+            button.disabled = !!disabled;
+        });
+    }
+
+    function setBackupControlsDisabled(disabled) {
+        [
+            btnCreate,
+            btnReload,
+            btnRestore,
+            fileInput,
+            confirmInput,
+            safetyCheck,
+            useSpecificTables,
+            btnSelectAllTables,
+            btnClearTables
+        ].forEach((control) => {
+            if (control) {
+                control.disabled = !!disabled;
+            }
+        });
+
+        setTableCheckboxesDisabled(disabled);
+        setListActionButtonsDisabled(disabled);
+    }
+
+    function showBusyState(title, text) {
+        if (!busyState) return;
+
+        if (busyTitle) {
+            busyTitle.textContent = title || 'Procesando accion';
+        }
+        if (busyText) {
+            busyText.textContent = text || 'Espera un momento mientras el sistema completa la operacion.';
+        }
+        busyState.classList.remove('d-none');
+    }
+
+    function hideBusyState() {
+        if (!busyState) return;
+        busyState.classList.add('d-none');
+    }
+
+    async function runWithBackupBusyState(options, task) {
+        if (backupActionBusy) {
+            toast('info', 'Ya hay una operacion de respaldo o restauracion en curso.');
+            return null;
+        }
+
+        const actionButton = options?.button || null;
+        backupActionBusy = true;
+        showBusyState(options?.title, options?.text);
+        setBackupControlsDisabled(true);
+        setButtonBusy(actionButton, true, options?.buttonText || '');
+
+        try {
+            return await task();
+        } finally {
+            setButtonBusy(actionButton, false);
+            setBackupControlsDisabled(false);
+            hideBusyState();
+            backupActionBusy = false;
+        }
+    }
+
     async function confirmDialog({ title, text, confirmText }) {
         if (!window.Swal) return confirm(text || title || 'Confirmar');
 
@@ -102,6 +208,40 @@
         return res.isConfirmed;
     }
 
+    async function askSafetyBackupDecision(subjectText) {
+        const target = String(subjectText || 'la restauracion');
+
+        if (!window.Swal) {
+            const wantsSafetyBackup = confirm(`Antes de restaurar ${target}, puedes crear un respaldo de seguridad del estado actual. ¿Deseas generarlo?`);
+            if (wantsSafetyBackup) {
+                return true;
+            }
+
+            const continueWithoutBackup = confirm(`Restauraras ${target} sin respaldo de seguridad previo. ¿Deseas continuar?`);
+            return continueWithoutBackup ? false : null;
+        }
+
+        const res = await Swal.fire({
+            title: 'Respaldo previo opcional',
+            text: `Antes de restaurar ${target}, puedes generar un respaldo de seguridad del estado actual. ¿Deseas crearlo?`,
+            icon: 'question',
+            showCancelButton: true,
+            showDenyButton: true,
+            confirmButtonText: 'Crear respaldo y restaurar',
+            denyButtonText: 'Restaurar sin respaldo',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#0d6efd',
+            denyButtonColor: '#6c757d',
+            cancelButtonColor: '#dc3545',
+            allowOutsideClick: false,
+            allowEscapeKey: true
+        });
+
+        if (res.isConfirmed) return true;
+        if (res.isDenied) return false;
+        return null;
+    }
+
     async function fetchJSON(url, options = {}) {
         const res = await fetch(url, options);
         const text = await res.text();
@@ -112,8 +252,19 @@
         }
 
         try {
-            return JSON.parse(text);
+            const payload = JSON.parse(text);
+            if (!res.ok) {
+                const detail = payload?.detail || payload?.msg || `Error HTTP ${res.status}`;
+                const error = new Error(detail);
+                error.payload = payload;
+                error.status = res.status;
+                throw error;
+            }
+            return payload;
         } catch (e) {
+            if (e instanceof Error && ('payload' in e || 'status' in e)) {
+                throw e;
+            }
             console.error('JSON invalido:', text);
             throw new Error('Respuesta JSON invalida.');
         }
@@ -182,12 +333,17 @@
             const date = escapeHtml(item.created_at || item.modified_at || '');
             const path = escapeHtml(item.relative_path || ('db/backups/' + item.file));
             const size = toSize(item.size);
+            const originLabel = escapeHtml(item.origin_label || 'Manual');
+            const originClass = item.origin === 'safety'
+                ? 'bg-warning text-dark'
+                : (item.origin === 'auto' ? 'bg-info text-dark' : 'bg-secondary');
 
             return `
                 <tr class="align-middle">
                     <td class="text-center">${index + 1}</td>
                     <td>
                         <code>${file}</code>
+                        <span class="badge ${originClass} ms-2">${originLabel}</span>
                         <small class="d-block text-muted">${path}</small>
                     </td>
                     <td>${date}</td>
@@ -214,6 +370,10 @@
             const date = escapeHtml(item.created_at || item.modified_at || '');
             const path = escapeHtml(item.relative_path || ('db/backups/' + item.file));
             const size = toSize(item.size);
+            const originLabel = escapeHtml(item.origin_label || 'Manual');
+            const originClass = item.origin === 'safety'
+                ? 'bg-warning text-dark'
+                : (item.origin === 'auto' ? 'bg-info text-dark' : 'bg-secondary');
 
             return `
                 <div class="tool-card">
@@ -226,6 +386,7 @@
                             <div class="tool-label">Archivo</div>
                             <div class="tool-value db-backup-text-break" title="${file}">
                                 <code>${file}</code>
+                                <span class="badge ${originClass} ms-2">${originLabel}</span>
                             </div>
                         </div>
                         <div class="tool-row">
@@ -277,6 +438,10 @@
                 </div>
             </div>
         `;
+
+        if (backupActionBusy) {
+            setListActionButtonsDisabled(true);
+        }
     }
 
     function syncAutoFrequencyVisibility() {
@@ -587,40 +752,44 @@
         });
         if (!ok) return;
 
-        btnCreate.disabled = true;
         try {
-            const fd = new FormData();
-            fd.append('action', 'create');
-            if (isPartial) {
-                selectedTables.forEach((table) => fd.append('selected_tables[]', table));
-            }
-
-            const data = await fetchJSON(API, { method: 'POST', body: fd });
-            if (!data.ok) {
-                toast('error', data.msg || 'No se pudo crear el respaldo.');
-                return;
-            }
-
-            toast('success', data.msg || 'Respaldo generado.');
-            await loadBackups();
-
-            if (window.Swal) {
-                const result = await Swal.fire({
-                    icon: 'success',
-                    title: 'Respaldo generado',
-                    text: (data.msg || 'Respaldo generado.') + ' Puedes descargarlo desde la lista.',
-                    showCancelButton: !!data.download_url,
-                    confirmButtonText: data.download_url ? 'Descargar ahora' : 'Aceptar',
-                    cancelButtonText: 'Cerrar'
-                });
-                if (result.isConfirmed && data.download_url) {
-                    window.location.href = data.download_url;
+            await runWithBackupBusyState({
+                title: 'Generando respaldo',
+                text: 'Se esta creando el archivo SQL. Esta accion puede tardar unos segundos segun el tamano de la base de datos.',
+                button: btnCreate,
+                buttonText: 'Generando...'
+            }, async () => {
+                const fd = new FormData();
+                fd.append('action', 'create');
+                if (isPartial) {
+                    selectedTables.forEach((table) => fd.append('selected_tables[]', table));
                 }
-            }
+
+                const data = await fetchJSON(API, { method: 'POST', body: fd });
+                if (!data.ok) {
+                    toast('error', data.msg || 'No se pudo crear el respaldo.');
+                    return;
+                }
+
+                toast('success', data.msg || 'Respaldo generado.');
+                await loadBackups();
+
+                if (window.Swal) {
+                    const result = await Swal.fire({
+                        icon: 'success',
+                        title: 'Respaldo generado',
+                        text: (data.msg || 'Respaldo generado.') + ' Puedes descargarlo desde la lista.',
+                        showCancelButton: !!data.download_url,
+                        confirmButtonText: data.download_url ? 'Descargar ahora' : 'Aceptar',
+                        cancelButtonText: 'Cerrar'
+                    });
+                    if (result.isConfirmed && data.download_url) {
+                        window.location.href = data.download_url;
+                    }
+                }
+            });
         } catch (error) {
             toast('error', error.message || 'Error al generar respaldo.');
-        } finally {
-            btnCreate.disabled = false;
         }
     });
 
@@ -646,40 +815,52 @@
 
             const ok = await confirmDialog({
                 title: 'Restaurar respaldo guardado',
-                text: `Se restaurara ${file}. Se creara un respaldo de seguridad antes de ejecutar.`,
+                text: `Se restaurara ${file}. Esta accion sobrescribira la base de datos actual.`,
                 confirmText: 'Si, restaurar'
             });
             if (!ok) return;
 
+            const createSafetyBackup = await askSafetyBackupDecision(`el respaldo ${file}`);
+            if (createSafetyBackup === null) return;
+
             try {
-                const fd = new FormData();
-                fd.append('action', 'restore_saved');
-                fd.append('file', file);
-                fd.append('create_safety_backup', '1');
+                await runWithBackupBusyState({
+                    title: 'Restaurando respaldo guardado',
+                    text: `Se esta restaurando ${file}. No cierres la ventana ni interrumpas el proceso.`,
+                    button: btnRestoreSaved
+                }, async () => {
+                    const fd = new FormData();
+                    fd.append('action', 'restore_saved');
+                    fd.append('file', file);
+                    fd.append('create_safety_backup', createSafetyBackup ? '1' : '0');
 
-                const data = await fetchJSON(API, { method: 'POST', body: fd });
-                if (!data.ok) {
-                    toast('error', data.msg || 'No se pudo restaurar el respaldo.');
-                    return;
-                }
+                    const data = await fetchJSON(API, { method: 'POST', body: fd });
+                    if (!data.ok) {
+                        toast('error', data.detail || data.msg || 'No se pudo restaurar el respaldo.');
+                        return;
+                    }
 
-                let msg = data.msg || 'Restauracion completada.';
-                if (data.safety_backup && data.safety_backup.file) {
-                    msg += ` Respaldo de seguridad: ${data.safety_backup.file}`;
-                }
+                    let msg = data.msg || 'Restauracion completada.';
+                    if (data.safety_backup && data.safety_backup.file) {
+                        msg += ` Respaldo de seguridad: ${data.safety_backup.file}`;
+                    }
+                    if (data.safety_backup_warning) {
+                        msg += ` Advertencia: ${data.safety_backup_warning}`;
+                    }
 
-                if (window.Swal) {
-                    await Swal.fire({
-                        icon: 'success',
-                        title: 'Restauracion completada',
-                        text: msg,
-                        confirmButtonText: 'Aceptar'
-                    });
-                } else {
-                    alert(msg);
-                }
+                    if (window.Swal) {
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'Restauracion completada',
+                            text: msg,
+                            confirmButtonText: 'Aceptar'
+                        });
+                    } else {
+                        alert(msg);
+                    }
 
-                await loadBackups();
+                    await loadBackups();
+                });
             } catch (error) {
                 toast('error', error.message || 'Error al restaurar respaldo guardado.');
             }
@@ -750,48 +931,56 @@
         });
         if (!ok) return;
 
-        const btnRestore = document.getElementById('btnRestaurarDb');
-        if (btnRestore) btnRestore.disabled = true;
+        const createSafetyBackup = await askSafetyBackupDecision('el archivo SQL seleccionado');
+        if (createSafetyBackup === null) return;
 
         try {
-            const fd = new FormData();
-            fd.append('action', 'restore');
-            fd.append('sql_file', file);
-            fd.append('create_safety_backup', safetyCheck?.checked ? '1' : '0');
+            await runWithBackupBusyState({
+                title: 'Restaurando base de datos',
+                text: 'Se esta aplicando el archivo SQL seleccionado. Esta operacion puede tardar varios minutos.',
+                button: btnRestore,
+                buttonText: 'Restaurando...'
+            }, async () => {
+                const fd = new FormData();
+                fd.append('action', 'restore');
+                fd.append('sql_file', file);
+                fd.append('create_safety_backup', createSafetyBackup ? '1' : '0');
 
-            const data = await fetchJSON(API, { method: 'POST', body: fd });
-            if (!data.ok) {
-                toast('error', data.msg || 'No se pudo restaurar la base de datos.');
-                return;
-            }
+                const data = await fetchJSON(API, { method: 'POST', body: fd });
+                if (!data.ok) {
+                    toast('error', data.detail || data.msg || 'No se pudo restaurar la base de datos.');
+                    return;
+                }
 
-            let msg = data.msg || 'Restauracion completada.';
-            if (data.safety_backup && data.safety_backup.file) {
-                msg += ` Respaldo de seguridad: ${data.safety_backup.file}`;
-            }
+                let msg = data.msg || 'Restauracion completada.';
+                if (data.safety_backup && data.safety_backup.file) {
+                    msg += ` Respaldo de seguridad: ${data.safety_backup.file}`;
+                }
+                if (data.safety_backup_warning) {
+                    msg += ` Advertencia: ${data.safety_backup_warning}`;
+                }
 
-            if (window.Swal) {
-                await Swal.fire({
-                    icon: 'success',
-                    title: 'Restauracion completada',
-                    text: msg,
-                    confirmButtonText: 'Aceptar'
-                });
-            } else {
-                alert(msg);
-            }
+                if (window.Swal) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Restauracion completada',
+                        text: msg,
+                        confirmButtonText: 'Aceptar'
+                    });
+                } else {
+                    alert(msg);
+                }
 
-            formRestore.reset();
-            if (useSpecificTables && tablesPicker) {
-                useSpecificTables.checked = false;
-                tablesPicker.classList.add('d-none');
-            }
-            setAllTablesChecked(false);
-            await loadBackups();
+                formRestore.reset();
+                if (useSpecificTables && tablesPicker) {
+                    useSpecificTables.checked = false;
+                    tablesPicker.classList.add('d-none');
+                }
+                setAllTablesChecked(false);
+                await loadBackups();
+            });
         } catch (error) {
             toast('error', error.message || 'Error al restaurar.');
-        } finally {
-            if (btnRestore) btnRestore.disabled = false;
         }
     });
 

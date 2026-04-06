@@ -206,10 +206,16 @@ try {
 
         $path = $ins->resolveBackupPath($file);
 
-        $createSafetyBackup = ((string)($_POST['create_safety_backup'] ?? '1')) === '1';
+        $createSafetyBackup = ((string)($_POST['create_safety_backup'] ?? '0')) === '1';
         $safety = null;
+        $safetyWarning = null;
         if ($createSafetyBackup) {
-            $safety = $ins->createBackup();
+            $safety = $ins->createBackup([], 'safety', true);
+            if (!empty($safety['missing_required_schemas']) && is_array($safety['missing_required_schemas'])) {
+                $safetyWarning = 'El respaldo de seguridad previo se genero sin los esquemas auxiliares: '
+                    . implode(', ', $safety['missing_required_schemas'])
+                    . '.';
+            }
         }
 
         $executed = $ins->restoreFromFile($path);
@@ -219,7 +225,8 @@ try {
             'msg' => 'Restauracion completada desde respaldo guardado.',
             'source_file' => $file,
             'executed_statements' => $executed,
-            'safety_backup' => $safety
+            'safety_backup' => $safety,
+            'safety_backup_warning' => $safetyWarning,
         ], JSON_UNESCAPED_UNICODE);
         exit();
     }
@@ -260,10 +267,16 @@ try {
             exit();
         }
 
-        $createSafetyBackup = ((string)($_POST['create_safety_backup'] ?? '1')) === '1';
+        $createSafetyBackup = ((string)($_POST['create_safety_backup'] ?? '0')) === '1';
         $safety = null;
+        $safetyWarning = null;
         if ($createSafetyBackup) {
-            $safety = $ins->createBackup();
+            $safety = $ins->createBackup([], 'safety', true);
+            if (!empty($safety['missing_required_schemas']) && is_array($safety['missing_required_schemas'])) {
+                $safetyWarning = 'El respaldo de seguridad previo se genero sin los esquemas auxiliares: '
+                    . implode(', ', $safety['missing_required_schemas'])
+                    . '.';
+            }
         }
 
         $executed = $ins->restoreFromFile($tmpPath);
@@ -272,7 +285,8 @@ try {
             'ok' => true,
             'msg' => 'Restauracion completada correctamente.',
             'executed_statements' => $executed,
-            'safety_backup' => $safety
+            'safety_backup' => $safety,
+            'safety_backup_warning' => $safetyWarning,
         ], JSON_UNESCAPED_UNICODE);
         exit();
     }

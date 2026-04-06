@@ -11,6 +11,16 @@
 
 <hr>
 
+<div class="alert alert-info d-none db-backup-busy-state" id="dbBackupBusyState" role="status" aria-live="polite" aria-atomic="true">
+    <div class="d-flex align-items-center gap-3">
+        <div class="spinner-border spinner-border-sm text-info flex-shrink-0" aria-hidden="true"></div>
+        <div class="flex-grow-1">
+            <div class="fw-semibold" id="dbBackupBusyTitle">Procesando accion</div>
+            <div class="small mb-0" id="dbBackupBusyText">Espera un momento mientras el sistema completa la operacion.</div>
+        </div>
+    </div>
+</div>
+
 <div class="card mb-4">
     <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
         <strong>Crear respaldo</strong>
@@ -50,6 +60,7 @@
 
         <p class="mb-0 text-muted">
             Se generara un archivo SQL con la estructura y los datos actuales del sistema.
+            En respaldos completos tambien se incluyen vistas, triggers, procedimientos, eventos y esquemas auxiliares de auditoria/revision cuando existen.
             El archivo queda guardado en <code>db/backups/</code> dentro del proyecto.
         </p>
     </div>
@@ -66,14 +77,11 @@
             <div class="mb-3">
                 <label for="restoreSqlFile" class="form-label"><b>Archivo SQL (.sql)</b></label>
                 <input type="file" class="form-control" id="restoreSqlFile" name="sql_file" accept=".sql" required>
-                <div class="form-text">Solo archivos de respaldo SQL exportados desde este sistema.</div>
+                <div class="form-text">Usa respaldos SQL generados por este sistema para restauraciones completas y sin conflictos.</div>
             </div>
 
-            <div class="form-check mb-3">
-                <input class="form-check-input" type="checkbox" id="createSafetyBackup" checked>
-                <label class="form-check-label" for="createSafetyBackup">
-                    Crear respaldo de seguridad antes de restaurar
-                </label>
+            <div class="alert alert-secondary py-2 px-3 small mb-3">
+                Antes de restaurar, el sistema te preguntara si deseas generar un respaldo de seguridad previo.
             </div>
 
             <div class="mb-3">
@@ -101,6 +109,23 @@
 </div>
 
 <style>
+.tools-scope .db-backup-busy-state {
+    border: 1px solid rgba(13, 110, 253, .2);
+    box-shadow: 0 10px 24px rgba(13, 110, 253, .08);
+}
+
+.tools-scope .db-backup-busy-state .spinner-border {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.tools-scope .btn.is-busy {
+    opacity: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .tools-scope .db-backup-actions {
     display: inline-flex;
     align-items: center;

@@ -5,6 +5,7 @@ namespace app\controllers;
 use app\models\mainModel;
 use DateTimeImmutable;
 use PDO;
+use PDOException;
 use RuntimeException;
 
 class dbBackupController extends mainModel
@@ -41,6 +42,7 @@ class dbBackupController extends mainModel
 
             $fileName = basename($path);
             $createdAt = $this->inferBackupDateFromFilename($fileName);
+            $origin = $this->inferBackupOriginFromFilename($fileName);
             if ($createdAt === null) {
                 $createdAt = date('Y-m-d H:i:s', (int)filemtime($path));
             }
@@ -50,14 +52,16 @@ class dbBackupController extends mainModel
                 'size' => (int)filesize($path),
                 'created_at' => $createdAt,
                 'modified_at' => date('Y-m-d H:i:s', (int)filemtime($path)),
-                'relative_path' => 'db/backups/' . $fileName
+                'relative_path' => 'db/backups/' . $fileName,
+                'origin' => $origin,
+                'origin_label' => $this->backupOriginLabel($origin),
             ];
         }
 
         return $result;
     }
 
-    public function createBackup(array $selectedTables = [], string $origin = 'manual'): array
+    public function createBackup(array $selectedTables = [], string $origin = 'manual', bool $allowIncompleteFullBackup = false): array
     {
         $this->ensureBackupDirectory();
 
@@ -82,6 +86,20 @@ class dbBackupController extends mainModel
 
         sort($tablesToExport, SORT_STRING);
 
+        $missingRequiredSchemas = [];
+        if (!$isPartial) {
+            $presentSchemas = $this->getSchemasForFullBackup($pdo);
+            $missingRequiredSchemas = $this->missingRequiredFullBackupSchemas($presentSchemas);
+            if (!$allowIncompleteFullBackup && $missingRequiredSchemas !== []) {
+                throw new RuntimeException(
+                    'No se puede generar un respaldo completo porque faltan esquemas auxiliares obligatorios: '
+                    . implode(', ', $missingRequiredSchemas)
+                    . '. Restaura primero esas bases o ejecuta la restauracion sin respaldo de seguridad previo.',
+                    409
+                );
+            }
+        }
+
         $dbName = preg_replace('/[^a-zA-Z0-9_-]/', '_', (string)DB_NAME);
         $fileScope = 'general';
         $backupKind = 'full';
@@ -98,14 +116,28 @@ class dbBackupController extends mainModel
         }
 
         $originTag = strtolower(trim($origin));
-        if (!in_array($originTag, ['manual', 'auto'], true)) {
+        if (!in_array($originTag, ['manual', 'auto', 'safety'], true)) {
             $originTag = 'manual';
         }
 
-        $fileName = $dbName . '_backup_' . ($originTag === 'auto' ? 'auto_' : '') . $fileScope . '_' . date('Ymd_His') . '.sql';
+        $originPrefix = '';
+        if ($originTag === 'auto') {
+            $originPrefix = 'auto_';
+        } elseif ($originTag === 'safety') {
+            $originPrefix = 'safety_';
+        }
+
+        $fileName = $dbName . '_backup_' . $originPrefix . $fileScope . '_' . date('Ymd_His') . '.sql';
         $fullPath = $this->backupDir . DIRECTORY_SEPARATOR . $fileName;
 
-        $this->writeDumpToFile($fullPath, $tablesToExport, $isPartial);
+        $usedMysqlDump = $this->writeDumpWithMysqlDump($fullPath, $tablesToExport, $isPartial);
+        if (!$usedMysqlDump && !$isPartial) {
+            throw new RuntimeException('El respaldo completo del sistema requiere mysqldump para incluir los esquemas auxiliares, rutinas y eventos.');
+        }
+
+        if (!$usedMysqlDump) {
+            $this->writeDumpToFile($fullPath, $tablesToExport, $isPartial);
+        }
 
         return [
             'file' => $fileName,
@@ -113,7 +145,8 @@ class dbBackupController extends mainModel
             'is_partial' => $isPartial,
             'tables' => $tablesToExport,
             'backup_kind' => $backupKind,
-            'origin' => $originTag
+            'origin' => $originTag,
+            'missing_required_schemas' => $missingRequiredSchemas,
         ];
     }
 
@@ -342,7 +375,29 @@ class dbBackupController extends mainModel
             throw new RuntimeException('El archivo de restauracion no es valido o no se puede leer.');
         }
 
-        $pdo = $this->connectAsAuth();
+        $restoreInspection = $this->inspectRestoreSourceFile($sourceFilePath);
+        if ($restoreInspection['empty_routines'] !== []) {
+            throw new RuntimeException(
+                'El archivo SQL no es restaurable porque contiene rutinas vacias: '
+                . implode(', ', $restoreInspection['empty_routines'])
+                . '. Este respaldo fue generado sin poder leer el cuerpo real de los procedimientos almacenados.'
+            );
+        }
+
+        if (($restoreInspection['missing_required_schemas'] ?? []) !== []) {
+            throw new RuntimeException(
+                'El archivo SQL no es restaurable como respaldo completo porque no incluye los esquemas auxiliares obligatorios: '
+                . implode(', ', $restoreInspection['missing_required_schemas'])
+                . '. Ese archivo fue generado cuando el sistema ya estaba incompleto.'
+            );
+        }
+
+        if ($this->restoreWithMysqlClient($sourceFilePath)) {
+            $this->validateRequiredObjectsAfterRestore($restoreInspection);
+            return 0;
+        }
+
+        $pdo = $this->connectAsAuth(null);
         $handle = fopen($sourceFilePath, 'rb');
         if ($handle === false) {
             throw new RuntimeException('No se pudo abrir el archivo para restaurar.');
@@ -352,6 +407,7 @@ class dbBackupController extends mainModel
         $delimiter = ';';
         $statement = '';
         $firstLine = true;
+        $insideBlockComment = false;
 
         try {
             $pdo->exec("SET FOREIGN_KEY_CHECKS=0");
@@ -369,12 +425,31 @@ class dbBackupController extends mainModel
                     continue;
                 }
 
+                if ($insideBlockComment) {
+                    if (strpos($trimmed, '*/') !== false) {
+                        $insideBlockComment = false;
+                    }
+                    continue;
+                }
+
                 if (preg_match('/^DELIMITER\s+(.+)$/i', $trimmed, $match)) {
                     $delimiter = (string)$match[1];
                     continue;
                 }
 
                 if ($delimiter === ';' && preg_match('/^(--\s|#)/', $trimmed)) {
+                    continue;
+                }
+
+                if (
+                    $delimiter === ';'
+                    && str_starts_with($trimmed, '/*')
+                    && !str_starts_with($trimmed, '/*!')
+                    && !str_starts_with($trimmed, '/*M!')
+                ) {
+                    if (strpos($trimmed, '*/') === false) {
+                        $insideBlockComment = true;
+                    }
                     continue;
                 }
 
@@ -409,6 +484,7 @@ class dbBackupController extends mainModel
             $pdo->exec("SET SQL_NOTES=1");
         }
 
+        $this->validateRequiredObjectsAfterRestore($restoreInspection);
         return $executed;
     }
 
@@ -430,20 +506,17 @@ class dbBackupController extends mainModel
         }
 
         try {
-            $this->writeLine($fh, '-- ========================================');
-            $this->writeLine($fh, '-- Respaldo de base de datos');
-            $this->writeLine($fh, '-- DB: ' . DB_NAME);
-            $this->writeLine($fh, '-- Fecha: ' . date('Y-m-d H:i:s'));
-            $this->writeLine($fh, '-- Tipo: ' . ($isPartial ? 'PARCIAL' : 'COMPLETO'));
-            $this->writeLine($fh, '-- Tablas incluidas: ' . implode(', ', $tablesToExport));
-            $this->writeLine($fh, '-- ========================================');
+            $this->writeBackupHeader($fh, $tablesToExport, $isPartial, 'GENERADOR_INTERNO');
+            $this->writeLine($fh, '-- Esquemas incluidos: ' . (string)DB_NAME);
             $this->writeLine($fh, '');
 
             $this->writeLine($fh, 'SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";');
             $this->writeLine($fh, 'SET time_zone = "+00:00";');
             $this->writeLine($fh, 'SET FOREIGN_KEY_CHECKS=0;');
             $this->writeLine($fh, 'SET UNIQUE_CHECKS=0;');
+            $this->writeLine($fh, 'SET SQL_NOTES=0;');
             $this->writeLine($fh, '');
+            $this->writeSchemaBootstrap($fh, $pdo, (string)DB_NAME);
 
             foreach ($tablesToExport as $tableName) {
 
@@ -492,34 +565,8 @@ class dbBackupController extends mainModel
             }
 
             if (!$isPartial) {
-                $viewStmt = $pdo->query("SHOW FULL TABLES WHERE Table_type = 'VIEW'");
-                $views = $viewStmt ? $viewStmt->fetchAll(PDO::FETCH_NUM) : [];
-                foreach ($views as $viewRow) {
-                    $viewName = (string)($viewRow[0] ?? '');
-                    if ($viewName === '') {
-                        continue;
-                    }
-
-                    $viewId = $this->qi($viewName);
-                    $createViewStmt = $pdo->query("SHOW CREATE VIEW {$viewId}");
-                    $createViewRow = $createViewStmt ? $createViewStmt->fetch(PDO::FETCH_ASSOC) : null;
-                    if (!$createViewRow) {
-                        continue;
-                    }
-
-                    $createViewSql = $createViewRow['Create View'] ?? null;
-                    if ($createViewSql === null) {
-                        $vals = array_values($createViewRow);
-                        $createViewSql = $vals[1] ?? '';
-                    }
-
-                    $createViewSql = preg_replace('/\sDEFINER=`[^`]+`@`[^`]+`\s/i', ' ', (string)$createViewSql);
-
-                    $this->writeLine($fh, '-- Vista: ' . $viewName);
-                    $this->writeLine($fh, 'DROP VIEW IF EXISTS ' . $viewId . ';');
-                    $this->writeLine($fh, rtrim((string)$createViewSql, ';') . ';');
-                    $this->writeLine($fh, '');
-                }
+                $this->writeViewsToFile($fh, $pdo);
+                $this->writeRoutinesToFile($fh, $pdo, DB_NAME);
             }
 
             $triggerStmt = $pdo->query("SHOW TRIGGERS");
@@ -562,8 +609,13 @@ class dbBackupController extends mainModel
                 $this->writeLine($fh, '');
             }
 
+            if (!$isPartial) {
+                $this->writeEventsToFile($fh, $pdo, DB_NAME);
+            }
+
             $this->writeLine($fh, 'SET FOREIGN_KEY_CHECKS=1;');
             $this->writeLine($fh, 'SET UNIQUE_CHECKS=1;');
+            $this->writeLine($fh, 'SET SQL_NOTES=1;');
         } catch (\Throwable $e) {
             @fclose($fh);
             @unlink($fullPath);
@@ -571,6 +623,513 @@ class dbBackupController extends mainModel
         }
 
         fclose($fh);
+    }
+
+    private function writeBackupHeader($handle, array $tablesToExport, bool $isPartial, string $generator): void
+    {
+        $this->writeLine($handle, '-- ========================================');
+        $this->writeLine($handle, '-- Respaldo de base de datos');
+        $this->writeLine($handle, '-- APP_METRO_BACKUP_SIGNATURE: 1');
+        $this->writeLine($handle, '-- APP_METRO_BACKUP_GENERATOR: ' . $generator);
+        $this->writeLine($handle, '-- DB: ' . DB_NAME);
+        $this->writeLine($handle, '-- Fecha: ' . date('Y-m-d H:i:s'));
+        $this->writeLine($handle, '-- Tipo: ' . ($isPartial ? 'PARCIAL' : 'COMPLETO'));
+        $this->writeLine($handle, '-- Tablas incluidas: ' . implode(', ', $tablesToExport));
+        $this->writeLine($handle, '-- ========================================');
+        $this->writeLine($handle, '');
+    }
+
+    private function writeViewsToFile($handle, PDO $pdo): void
+    {
+        $viewStmt = $pdo->query("SHOW FULL TABLES WHERE Table_type = 'VIEW'");
+        $views = $viewStmt ? $viewStmt->fetchAll(PDO::FETCH_NUM) : [];
+        foreach ($views as $viewRow) {
+            $viewName = (string)($viewRow[0] ?? '');
+            if ($viewName === '') {
+                continue;
+            }
+
+            $viewId = $this->qi($viewName);
+            $createViewStmt = $pdo->query("SHOW CREATE VIEW {$viewId}");
+            $createViewRow = $createViewStmt ? $createViewStmt->fetch(PDO::FETCH_ASSOC) : null;
+            if (!$createViewRow) {
+                continue;
+            }
+
+            $createViewSql = $this->extractCreateStatement($createViewRow, ['Create View']);
+            $createViewSql = preg_replace('/\sDEFINER=`[^`]+`@`[^`]+`\s/i', ' ', (string)$createViewSql);
+
+            $this->writeLine($handle, '-- Vista: ' . $viewName);
+            $this->writeLine($handle, 'DROP VIEW IF EXISTS ' . $viewId . ';');
+            $this->writeLine($handle, rtrim((string)$createViewSql, ';') . ';');
+            $this->writeLine($handle, '');
+        }
+    }
+
+    private function writeRoutinesToFile($handle, PDO $pdo, string $schemaName = DB_NAME, ?string $connectedUser = null): void
+    {
+        $stmt = $pdo->prepare(
+            "SELECT ROUTINE_NAME, ROUTINE_TYPE
+             FROM INFORMATION_SCHEMA.ROUTINES
+             WHERE ROUTINE_SCHEMA = :schema
+             ORDER BY ROUTINE_TYPE ASC, ROUTINE_NAME ASC"
+        );
+        $stmt->execute([':schema' => $schemaName]);
+        $routines = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($routines as $routineRow) {
+            $routineName = trim((string)($routineRow['ROUTINE_NAME'] ?? ''));
+            $routineType = strtoupper(trim((string)($routineRow['ROUTINE_TYPE'] ?? '')));
+            if ($routineName === '' || !in_array($routineType, ['PROCEDURE', 'FUNCTION'], true)) {
+                continue;
+            }
+
+            $routineId = $this->qualifyIdentifier($schemaName, $routineName);
+            $showSql = $routineType === 'FUNCTION'
+                ? "SHOW CREATE FUNCTION {$routineId}"
+                : "SHOW CREATE PROCEDURE {$routineId}";
+
+            try {
+                $createStmt = $pdo->query($showSql);
+                $createRow = $createStmt ? $createStmt->fetch(PDO::FETCH_ASSOC) : null;
+            } catch (\Throwable $e) {
+                $accountLabel = ($connectedUser !== null && trim($connectedUser) !== '')
+                    ? ' con la cuenta "' . trim($connectedUser) . '"'
+                    : '';
+                throw new RuntimeException(
+                    'No se pudo exportar la rutina '
+                    . $schemaName . '.' . $routineName
+                    . $accountLabel
+                    . ': ' . $e->getMessage(),
+                    0,
+                    $e
+                );
+            }
+
+            if (!$createRow) {
+                continue;
+            }
+
+            $createSql = $this->extractCreateStatement(
+                $createRow,
+                $routineType === 'FUNCTION' ? ['Create Function'] : ['Create Procedure']
+            );
+            $createSql = $this->stripDefinerMetadata((string)$createSql);
+
+            if ($createSql === '') {
+                $accountLabel = ($connectedUser !== null && trim($connectedUser) !== '')
+                    ? ' con la cuenta "' . trim($connectedUser) . '"'
+                    : '';
+                throw new RuntimeException(
+                    'No se pudo exportar la definicion de la rutina '
+                    . $schemaName . '.' . $routineName
+                    . $accountLabel
+                    . '. La cuenta usada para el respaldo no puede leer SHOW CREATE '
+                    . strtolower($routineType)
+                    . '; revisa DB_AUTH_USER/DB_AUTH_PASS o los privilegios del usuario de respaldo.'
+                );
+            }
+
+            $this->writeLine($handle, '-- ' . $routineType . ': ' . $routineName);
+            $this->writeLine($handle, 'DROP ' . $routineType . ' IF EXISTS ' . $routineId . ';');
+            $this->writeLine($handle, 'DELIMITER $$');
+            $this->writeLine($handle, rtrim($createSql, ';') . '$$');
+            $this->writeLine($handle, 'DELIMITER ;');
+            $this->writeLine($handle, '');
+        }
+    }
+
+    private function writeEventsToFile($handle, PDO $pdo, string $schemaName = DB_NAME): void
+    {
+        $stmt = $pdo->prepare(
+            "SELECT EVENT_NAME
+             FROM INFORMATION_SCHEMA.EVENTS
+             WHERE EVENT_SCHEMA = :schema
+             ORDER BY EVENT_NAME ASC"
+        );
+        $stmt->execute([':schema' => $schemaName]);
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($events as $eventRow) {
+            $eventName = trim((string)($eventRow['EVENT_NAME'] ?? ''));
+            if ($eventName === '') {
+                continue;
+            }
+
+            $eventId = $this->qualifyIdentifier($schemaName, $eventName);
+            try {
+                $createStmt = $pdo->query("SHOW CREATE EVENT {$eventId}");
+                $createRow = $createStmt ? $createStmt->fetch(PDO::FETCH_ASSOC) : null;
+            } catch (\Throwable $e) {
+                $this->writeLine($handle, '-- Advertencia: no se pudo exportar el evento ' . $schemaName . '.' . $eventName . ': ' . $e->getMessage());
+                $this->writeLine($handle, '');
+                continue;
+            }
+
+            if (!$createRow) {
+                continue;
+            }
+
+            $createSql = $this->extractCreateStatement($createRow, ['Create Event']);
+            $createSql = $this->stripDefinerMetadata((string)$createSql);
+
+            $this->writeLine($handle, '-- EVENTO: ' . $eventName);
+            $this->writeLine($handle, 'DROP EVENT IF EXISTS ' . $eventId . ';');
+            $this->writeLine($handle, 'DELIMITER $$');
+            $this->writeLine($handle, rtrim($createSql, ';') . '$$');
+            $this->writeLine($handle, 'DELIMITER ;');
+            $this->writeLine($handle, '');
+        }
+    }
+
+    private function extractCreateStatement(?array $row, array $preferredKeys): string
+    {
+        if (!is_array($row)) {
+            return '';
+        }
+
+        foreach ($preferredKeys as $key) {
+            if (isset($row[$key]) && is_string($row[$key])) {
+                return $row[$key];
+            }
+        }
+
+        foreach ($row as $value) {
+            if (is_string($value) && stripos($value, 'CREATE ') === 0) {
+                return $value;
+            }
+        }
+
+        $values = array_values($row);
+        foreach ($values as $value) {
+            if (is_string($value) && stripos($value, 'CREATE ') === 0) {
+                return $value;
+            }
+        }
+
+        return '';
+    }
+
+    private function stripDefinerMetadata(string $sql): string
+    {
+        $sql = preg_replace('/\/\*![0-9]{5}\s+DEFINER=`[^`]+`@`[^`]+`[^*]*\*\//i', '', $sql);
+        $sql = preg_replace('/CREATE\s+DEFINER=`[^`]+`@`[^`]+`\s+/i', 'CREATE ', $sql);
+        $sql = preg_replace('/\sDEFINER=`[^`]+`@`[^`]+`\s/i', ' ', $sql);
+
+        return trim((string)$sql);
+    }
+
+    private function writeDumpWithMysqlDump(string $fullPath, array $tablesToExport, bool $isPartial): bool
+    {
+        $binary = $this->resolveMysqlBinary('mysqldump');
+        if ($binary === null) {
+            return false;
+        }
+
+        $resolved = $this->resolveWorkingDatabaseAccess(null);
+        $connection = $this->getDatabaseConnectionOptions();
+        $schemasToDump = $isPartial ? [DB_NAME] : $this->getSchemasForFullBackup($resolved['pdo']);
+        $fh = fopen($fullPath, 'wb');
+        if ($fh === false) {
+            throw new RuntimeException('No se pudo crear el archivo de respaldo.');
+        }
+
+        try {
+            $this->writeBackupHeader($fh, $tablesToExport, $isPartial, 'MYSQLDUMP');
+            $this->writeLine($fh, '-- Esquemas incluidos: ' . implode(', ', $schemasToDump));
+            $this->writeLine($fh, '');
+
+            foreach ($schemasToDump as $schemaName) {
+                $this->writeLine($fh, '-- Esquema: ' . $schemaName);
+                $this->writeSchemaBootstrap($fh, $resolved['pdo'], $schemaName);
+
+                $args = [
+                    $binary,
+                    '--host=' . $connection['host'],
+                    '--protocol=tcp',
+                    '--default-character-set=utf8mb4',
+                    '--single-transaction',
+                    '--skip-lock-tables',
+                    '--hex-blob',
+                    '--skip-comments',
+                    '--user=' . $resolved['user'],
+                    '--password=' . (string)$resolved['pass'],
+                ];
+
+                if ($connection['port'] !== null) {
+                    $args[] = '--port=' . $connection['port'];
+                }
+
+                $args[] = $schemaName;
+                if ($isPartial && $schemaName === DB_NAME) {
+                    foreach ($tablesToExport as $tableName) {
+                        $args[] = $tableName;
+                    }
+                }
+
+                $command = $this->buildShellCommand($args);
+                $descriptor = [
+                    0 => ['pipe', 'r'],
+                    1 => ['pipe', 'w'],
+                    2 => ['pipe', 'w'],
+                ];
+
+                $process = proc_open($command, $descriptor, $pipes);
+                if (!is_resource($process)) {
+                    throw new RuntimeException('No se pudo iniciar mysqldump para generar el respaldo.');
+                }
+
+                fclose($pipes[0]);
+
+                while (($line = fgets($pipes[1])) !== false) {
+                    fwrite($fh, $this->normalizeDumpLine($line));
+                }
+
+                $remaining = stream_get_contents($pipes[1]);
+                if ($remaining !== false && $remaining !== '') {
+                    fwrite($fh, $this->normalizeDumpLine($remaining));
+                }
+
+                fclose($pipes[1]);
+                $stderr = stream_get_contents($pipes[2]);
+                fclose($pipes[2]);
+
+                $exitCode = proc_close($process);
+                if ($exitCode !== 0) {
+                    throw new RuntimeException('mysqldump no pudo generar el respaldo: ' . trim((string)$stderr));
+                }
+
+                if (!$isPartial) {
+                    $this->writeLine($fh, '-- Objetos programables del esquema: ' . $schemaName);
+                    $this->writeSchemaBootstrap($fh, $resolved['pdo'], $schemaName);
+                    $this->writeRoutinesToFile($fh, $resolved['pdo'], $schemaName, (string)$resolved['user']);
+                    $this->writeEventsToFile($fh, $resolved['pdo'], $schemaName);
+                }
+
+                $this->writeLine($fh, '');
+            }
+        } catch (\Throwable $e) {
+            @fclose($fh);
+            @unlink($fullPath);
+            throw $e;
+        }
+
+        fclose($fh);
+        return true;
+    }
+
+    private function restoreWithMysqlClient(string $sourceFilePath): bool
+    {
+        $binary = $this->resolveMysqlBinary('mysql');
+        if ($binary === null) {
+            return false;
+        }
+
+        $resolved = $this->resolveWorkingDatabaseAccess(null);
+        $connection = $this->getDatabaseConnectionOptions();
+
+        $args = [
+            $binary,
+            '--host=' . $connection['host'],
+            '--protocol=tcp',
+            '--default-character-set=utf8mb4',
+            '--user=' . $resolved['user'],
+            '--password=' . (string)$resolved['pass'],
+        ];
+
+        if ($connection['port'] !== null) {
+            $args[] = '--port=' . $connection['port'];
+        }
+
+        $command = $this->buildShellCommand($args);
+        $descriptor = [
+            0 => ['file', $sourceFilePath, 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+
+        $process = proc_open($command, $descriptor, $pipes);
+        if (!is_resource($process)) {
+            throw new RuntimeException('No se pudo iniciar el cliente mysql para restaurar el respaldo.');
+        }
+
+        $stdout = stream_get_contents($pipes[1]);
+        fclose($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[2]);
+
+        $exitCode = proc_close($process);
+        if ($exitCode !== 0) {
+            $detail = trim((string)$stderr);
+            if ($detail === '') {
+                $detail = trim((string)$stdout);
+            }
+            throw new RuntimeException('El cliente mysql no pudo restaurar el respaldo: ' . $detail);
+        }
+
+        return true;
+    }
+
+    private function normalizeDumpLine(string $content): string
+    {
+        $content = preg_replace('/\/\*![0-9]{5}\s+DEFINER=`[^`]+`@`[^`]+`[^*]*\*\//i', '', $content);
+        $content = preg_replace('/CREATE\s+DEFINER=`[^`]+`@`[^`]+`\s+(PROCEDURE|FUNCTION|TRIGGER|EVENT)/i', 'CREATE $1', $content);
+        $content = preg_replace('/\sDEFINER=`[^`]+`@`[^`]+`\s/i', ' ', $content);
+
+        return (string)$content;
+    }
+
+    private function resolveMysqlBinary(string $binaryName): ?string
+    {
+        $isWindows = DIRECTORY_SEPARATOR === '\\';
+        $projectRoot = dirname(__DIR__, 2);
+        $xamppRoot = dirname(dirname($projectRoot));
+        $fileName = $isWindows ? $binaryName . '.exe' : $binaryName;
+
+        $candidates = [
+            $xamppRoot . DIRECTORY_SEPARATOR . 'mysql' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . $fileName,
+        ];
+
+        $pathEnv = getenv('PATH') ?: '';
+        if ($pathEnv !== '') {
+            foreach (explode(PATH_SEPARATOR, $pathEnv) as $dir) {
+                $dir = trim($dir, " \t\n\r\0\x0B\"'");
+                if ($dir === '') {
+                    continue;
+                }
+                $candidates[] = rtrim($dir, '\\/') . DIRECTORY_SEPARATOR . $fileName;
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private function buildShellCommand(array $parts): string
+    {
+        return implode(' ', array_map(static function ($part): string {
+            return escapeshellarg((string)$part);
+        }, $parts));
+    }
+
+    private function getDatabaseConnectionOptions(): array
+    {
+        $server = (string)DB_SERVER;
+        $host = $server;
+        $port = null;
+
+        if (preg_match('/^([^:]+):(\d+)$/', $server, $match) === 1) {
+            $host = trim((string)$match[1]);
+            $port = (int)$match[2];
+        }
+
+        if ($host === '') {
+            $host = '127.0.0.1';
+        }
+
+        return [
+            'host' => $host,
+            'port' => $port,
+        ];
+    }
+
+    private function writeSchemaBootstrap($handle, PDO $pdo, string $schemaName): void
+    {
+        $this->writeLine($handle, $this->buildCreateDatabaseStatement($pdo, $schemaName));
+        $this->writeLine($handle, 'USE ' . $this->qi($schemaName) . ';');
+        $this->writeLine($handle, '');
+    }
+
+    private function buildCreateDatabaseStatement(PDO $pdo, string $schemaName): string
+    {
+        $stmt = $pdo->prepare(
+            "SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME
+             FROM INFORMATION_SCHEMA.SCHEMATA
+             WHERE SCHEMA_NAME = :schema
+             LIMIT 1"
+        );
+        $stmt->execute([':schema' => $schemaName]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+        $charset = trim((string)($row['DEFAULT_CHARACTER_SET_NAME'] ?? ''));
+        if (!$this->isSafeIdentifier($charset)) {
+            $charset = 'utf8mb4';
+        }
+
+        $collation = trim((string)($row['DEFAULT_COLLATION_NAME'] ?? ''));
+        if (!$this->isSafeIdentifier($collation)) {
+            $collation = 'utf8mb4_general_ci';
+        }
+
+        return 'CREATE DATABASE IF NOT EXISTS '
+            . $this->qi($schemaName)
+            . ' DEFAULT CHARACTER SET '
+            . $charset
+            . ' COLLATE '
+            . $collation
+            . ';';
+    }
+
+    private function getSchemasForFullBackup(PDO $pdo): array
+    {
+        $candidateSchemas = $this->requiredFullBackupSchemas();
+
+        $stmt = $pdo->prepare(
+            "SELECT SCHEMA_NAME
+             FROM INFORMATION_SCHEMA.SCHEMATA
+             WHERE SCHEMA_NAME = :schema
+             LIMIT 1"
+        );
+
+        $schemas = [];
+        foreach ($candidateSchemas as $schemaName) {
+            if ($schemaName === '') {
+                continue;
+            }
+
+            $stmt->execute([':schema' => $schemaName]);
+            $exists = $stmt->fetchColumn();
+            if ($exists !== false) {
+                $schemas[] = $schemaName;
+            }
+        }
+
+        if ($schemas === []) {
+            $schemas[] = (string)DB_NAME;
+        }
+
+        return $schemas;
+    }
+
+    private function requiredFullBackupSchemas(): array
+    {
+        return array_values(array_unique([
+            (string)DB_NAME,
+            (string)DB_NAME . '_audit',
+            (string)DB_NAME . '_review',
+        ]));
+    }
+
+    private function missingRequiredFullBackupSchemas(array $presentSchemas): array
+    {
+        $presentMap = [];
+        foreach ($presentSchemas as $schemaName) {
+            $presentMap[(string)$schemaName] = true;
+        }
+
+        $missing = [];
+        foreach ($this->requiredFullBackupSchemas() as $schemaName) {
+            if (!isset($presentMap[$schemaName])) {
+                $missing[] = $schemaName;
+            }
+        }
+
+        return $missing;
     }
 
     private function writeLine($handle, string $line): void
@@ -581,6 +1140,11 @@ class dbBackupController extends mainModel
     private function qi(string $identifier): string
     {
         return '`' . str_replace('`', '``', $identifier) . '`';
+    }
+
+    private function qualifyIdentifier(string $schemaName, string $objectName): string
+    {
+        return $this->qi($schemaName) . '.' . $this->qi($objectName);
     }
 
     private function serializeRow(PDO $pdo, array $row): string
@@ -698,6 +1262,223 @@ class dbBackupController extends mainModel
         }
 
         return sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year, $month, $day, $hour, $minute, $second);
+    }
+
+    private function inferBackupOriginFromFilename(string $fileName): string
+    {
+        if (preg_match('/_backup_auto_/i', $fileName) === 1) {
+            return 'auto';
+        }
+
+        if (preg_match('/_backup_safety_/i', $fileName) === 1) {
+            return 'safety';
+        }
+
+        return 'manual';
+    }
+
+    private function backupOriginLabel(string $origin): string
+    {
+        if ($origin === 'auto') {
+            return 'Automatico';
+        }
+
+        if ($origin === 'safety') {
+            return 'Seguridad previa';
+        }
+
+        return 'Manual';
+    }
+
+    private function inspectRestoreSourceFile(string $sourceFilePath): array
+    {
+        $handle = fopen($sourceFilePath, 'rb');
+        if ($handle === false) {
+            throw new RuntimeException('No se pudo abrir el archivo de restauracion para validarlo.');
+        }
+
+        $hasSignature = false;
+        $isFullBackup = false;
+        $containsProgrammableObjects = false;
+        $emptyRoutines = [];
+        $includedSchemas = [];
+        $currentRoutine = null;
+        $awaitingRoutineBody = false;
+        $firstLine = true;
+
+        try {
+            while (($line = fgets($handle)) !== false) {
+                if ($firstLine) {
+                    $line = preg_replace('/^\xEF\xBB\xBF/', '', $line);
+                    $firstLine = false;
+                }
+
+                $trimmed = trim($line);
+                if ($trimmed === '') {
+                    continue;
+                }
+
+                if (strpos($trimmed, '-- APP_METRO_BACKUP_SIGNATURE: 1') === 0) {
+                    $hasSignature = true;
+                    continue;
+                }
+
+                if (strpos($trimmed, '-- Tipo: COMPLETO') === 0) {
+                    $isFullBackup = true;
+                    continue;
+                }
+
+                if (strpos($trimmed, '-- Esquemas incluidos: ') === 0) {
+                    $rawSchemaList = trim((string)substr($trimmed, strlen('-- Esquemas incluidos: ')));
+                    if ($rawSchemaList !== '') {
+                        foreach (explode(',', $rawSchemaList) as $schemaName) {
+                            $schemaName = trim($schemaName);
+                            if ($schemaName !== '') {
+                                $includedSchemas[$schemaName] = true;
+                            }
+                        }
+                    }
+                    continue;
+                }
+
+                if (
+                    preg_match('/^--\s+(PROCEDURE|FUNCTION):\s+(.+)$/i', $trimmed, $match) === 1
+                ) {
+                    $containsProgrammableObjects = true;
+                    $currentRoutine = [
+                        'type' => strtoupper((string)$match[1]),
+                        'name' => trim((string)$match[2]),
+                    ];
+                    $awaitingRoutineBody = false;
+                    continue;
+                }
+
+                if (
+                    !$containsProgrammableObjects
+                    && preg_match('/^(CREATE|DROP)\s+(PROCEDURE|FUNCTION|TRIGGER|EVENT)\b/i', $trimmed) === 1
+                ) {
+                    $containsProgrammableObjects = true;
+                }
+
+                if ($currentRoutine === null) {
+                    continue;
+                }
+
+                if (preg_match('/^DELIMITER\s+\$\$$/i', $trimmed) === 1) {
+                    $awaitingRoutineBody = true;
+                    continue;
+                }
+
+                if (!$awaitingRoutineBody) {
+                    continue;
+                }
+
+                if ($trimmed === '$$') {
+                    $emptyRoutines[] = $currentRoutine['type'] . ' ' . $currentRoutine['name'];
+                    $currentRoutine = null;
+                    $awaitingRoutineBody = false;
+                    continue;
+                }
+
+                if (preg_match('/^CREATE\s+/i', $trimmed) === 1) {
+                    $currentRoutine = null;
+                    $awaitingRoutineBody = false;
+                    continue;
+                }
+
+                if (preg_match('/^DELIMITER\s+;$/i', $trimmed) === 1) {
+                    $currentRoutine = null;
+                    $awaitingRoutineBody = false;
+                }
+            }
+        } finally {
+            fclose($handle);
+        }
+
+        $missingRequiredSchemas = [];
+        if ($hasSignature && $isFullBackup && $includedSchemas !== []) {
+            $missingRequiredSchemas = $this->missingRequiredFullBackupSchemas(array_keys($includedSchemas));
+        }
+
+        return [
+            'has_signature' => $hasSignature,
+            'is_full_backup' => $isFullBackup,
+            'contains_programmable_objects' => $containsProgrammableObjects,
+            'empty_routines' => array_values(array_unique($emptyRoutines)),
+            'included_schemas' => array_keys($includedSchemas),
+            'missing_required_schemas' => $missingRequiredSchemas,
+        ];
+    }
+
+    private function validateRequiredObjectsAfterRestore(array $restoreInspection): void
+    {
+        $shouldValidateRequiredProcedures =
+            (($restoreInspection['has_signature'] ?? false) && ($restoreInspection['is_full_backup'] ?? false))
+            || ($restoreInspection['contains_programmable_objects'] ?? false);
+
+        if (!$shouldValidateRequiredProcedures) {
+            return;
+        }
+
+        $pdo = $this->connectAsAuth();
+        $requiredBySchema = $this->requiredProcedureMatrix();
+        $missing = [];
+
+        foreach ($requiredBySchema as $schemaName => $routineNames) {
+            $placeholders = implode(', ', array_fill(0, count($routineNames), '?'));
+            $sql = "SELECT ROUTINE_NAME
+                    FROM INFORMATION_SCHEMA.ROUTINES
+                    WHERE ROUTINE_SCHEMA = ?
+                      AND ROUTINE_TYPE = 'PROCEDURE'
+                      AND ROUTINE_NAME IN ({$placeholders})";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(array_merge([$schemaName], $routineNames));
+            $found = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            $foundMap = [];
+            foreach ($found as $routineName) {
+                $foundMap[(string)$routineName] = true;
+            }
+
+            foreach ($routineNames as $routineName) {
+                if (!isset($foundMap[$routineName])) {
+                    $missing[] = $schemaName . '.' . $routineName;
+                }
+            }
+        }
+
+        if ($missing !== []) {
+            throw new RuntimeException(
+                'La restauracion termino, pero faltan procedimientos obligatorios: '
+                . implode(', ', $missing)
+                . '. El respaldo no quedo completo o fue generado sin acceso a SHOW CREATE PROCEDURE.'
+            );
+        }
+    }
+
+    private function requiredProcedureMatrix(): array
+    {
+        return [
+            (string)DB_NAME => [
+                'sp_herramienta_ocupaciones',
+                'sp_ot_agregar_detalle',
+                'sp_ot_actualizar',
+                'sp_ot_eliminar_logico',
+                'sp_ot_actualizar_detalle',
+                'sp_ot_eliminar_detalle',
+                'sp_ot_ajustar_herramienta_delta',
+                'sp_ot_set_herramienta_cantidad',
+                'sp_ot_asignar_herramienta',
+                'sp_ot_cambiar_estado',
+                'sp_ot_crear',
+                'sp_reporte_registrar_generado',
+                'sp_usuario_registrar_login_exitoso',
+                'sp_usuario_registrar_login_fallido',
+            ],
+            (string)DB_NAME . '_audit' => [
+                'sp_minute_tasks',
+                'sp_sync_log_user',
+            ],
+        ];
     }
 
     private function ensureAutoConfigTable(PDO $pdo): void
@@ -913,13 +1694,72 @@ class dbBackupController extends mainModel
         }
     }
 
-    private function connectAsAuth(): PDO
+    private function resolveWorkingDatabaseAccess(?string $databaseName = null): array
     {
-        $user = defined('DB_AUTH_USER') ? DB_AUTH_USER : DB_USER;
-        $pass = defined('DB_AUTH_PASS') ? DB_AUTH_PASS : DB_PASS;
+        $lastException = null;
+        $authUser = defined('DB_AUTH_USER') ? trim((string)DB_AUTH_USER) : '';
 
-        $dsn = "mysql:host=" . DB_SERVER . ";dbname=" . DB_NAME . ";charset=utf8mb4";
-        $pdo = new PDO(
+        foreach ($this->getDatabaseCredentialCandidates() as $candidate) {
+            try {
+                $pdo = $this->createDatabaseConnection(
+                    (string)$candidate['user'],
+                    (string)$candidate['pass'],
+                    $databaseName ?? (string)DB_NAME
+                );
+                $this->applyConnectionSessionSettings($pdo);
+                return [
+                    'pdo' => $pdo,
+                    'user' => (string)$candidate['user'],
+                    'pass' => (string)$candidate['pass'],
+                ];
+            } catch (PDOException $e) {
+                $lastException = $e;
+            }
+        }
+
+        if ($authUser !== '') {
+            $message = 'No se pudo conectar con la cuenta de respaldo/restauracion configurada en DB_AUTH_USER (' . $authUser . ').';
+        } else {
+            $message = 'No se pudo conectar con la cuenta operativa porque no hay una cuenta DB_AUTH_USER configurada para respaldo/restauracion.';
+        }
+
+        if ($lastException instanceof PDOException) {
+            $message .= ' ' . $lastException->getMessage();
+        }
+
+        throw new RuntimeException($message, 0, $lastException);
+    }
+
+    private function getDatabaseCredentialCandidates(): array
+    {
+        $candidates = [];
+        $authUser = defined('DB_AUTH_USER') ? (string)DB_AUTH_USER : '';
+        $authPass = defined('DB_AUTH_PASS') ? (string)DB_AUTH_PASS : '';
+
+        if (trim($authUser) !== '') {
+            $candidates[] = [
+                'user' => $authUser,
+                'pass' => $authPass,
+            ];
+        } else {
+            $candidates[] = [
+                'user' => (string)DB_USER,
+                'pass' => (string)DB_PASS,
+            ];
+        }
+
+        return $candidates;
+    }
+
+    private function createDatabaseConnection(string $user, string $pass, ?string $databaseName = null): PDO
+    {
+        $connection = $this->getDatabaseConnectionOptions();
+        $dsn = "mysql:host=" . $connection['host']
+            . ($connection['port'] !== null ? ";port=" . $connection['port'] : '')
+            . ($databaseName !== null && $databaseName !== '' ? ";dbname=" . $databaseName : '')
+            . ";charset=utf8mb4";
+
+        return new PDO(
             $dsn,
             $user,
             $pass,
@@ -929,7 +1769,10 @@ class dbBackupController extends mainModel
                 PDO::ATTR_EMULATE_PREPARES => false
             ]
         );
+    }
 
+    private function applyConnectionSessionSettings(PDO $pdo): void
+    {
         $pdo->exec("SET NAMES utf8mb4");
         $pdo->exec("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED");
 
@@ -938,7 +1781,11 @@ class dbBackupController extends mainModel
             $stmt = $pdo->prepare("SET @app_user = :id_user");
             $stmt->execute([':id_user' => (string)$idUser]);
         }
+    }
 
-        return $pdo;
+    private function connectAsAuth(?string $databaseName = null): PDO
+    {
+        $resolved = $this->resolveWorkingDatabaseAccess($databaseName);
+        return $resolved['pdo'];
     }
 }

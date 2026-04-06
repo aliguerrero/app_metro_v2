@@ -73,7 +73,7 @@ $insEmpleado = new empleadoController();
 
             <div class="modal-body">
                 <form id="formCategoriaEmpleadoUpdate" class="FormularioAjax" action="#" method="POST">
-                    <input type="hidden" id="edit_id_ai_categoria_empleado" name="id_ai_categoria_empleado" value="">
+                    <input type="hidden" id="catemp_edit_id_ai_categoria_empleado" name="id_ai_categoria_empleado" value="">
 
                     <div class="row g-3">
                         <div class="col-12 col-lg-4 d-flex flex-column">
